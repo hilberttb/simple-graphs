@@ -1,0 +1,4 @@
+﻿l_english:
+ stats_tracker_debug_snapshot_date:0 "SIMPLE_GRAPHS snapshot on [GetCurrentDate.GetStringLong] (year [GetCurrentDate.GetYear])"
+ stats_tracker_debug_faith:0 "SIMPLE_GRAPHS FAITH [THIS.Faith.GetNameNoTooltip] counties=[THIS.Var('stats_tracker_running_count').GetValue] enc=[THIS.Var('stats_tracker_encoded').GetValue]"
+ stats_tracker_debug_culture:0 "SIMPLE_GRAPHS CULTURE [THIS.Culture.GetNameNoTooltip] counties=[THIS.Var('stats_tracker_running_count').GetValue] enc=[THIS.Var('stats_tracker_encoded').GetValue]"

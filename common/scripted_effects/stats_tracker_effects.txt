@@ -1,0 +1,134 @@
+﻿###############################################################################
+# Simple Graphs - data collection
+#
+# Counts how many counties belong to each faith and each culture, and appends
+# that count to a per-faith / per-culture history list.
+#
+# Verified against CK3 1.19.0.6 (Scribe) vanilla script. Notes on the
+# non-obvious names used here, because CK3 fails silently on wrong names:
+#   - every_county          : global list of ALL counties in the world.
+#                             (vanilla: common/scripted_effects/00_history_effects.txt)
+#   - every_culture_global  : global list of all cultures. NOT "every_culture",
+#                             which does not exist.
+#   - every_religion_global / every_faith : there is NO "every_faith_global".
+#                             Faiths are only reachable per-religion, so the
+#                             global sweep must be nested exactly like this.
+#                             (vanilla: common/scripted_effects/00_game_rule_effects.txt)
+#   - a county carries its own faith/culture directly; we read them off the
+#     county title, NOT off its holder.
+#
+# STORAGE ENCODING - important, read before changing anything here.
+#   Full write-up, gotchas and test procedure: README_DATA_COLLECTION.md
+#   add_to_variable_list DE-DUPLICATES by value: it is a set, not an append-only
+#   sequence. This was confirmed in-game - appending 9 twice to a fresh list
+#   leaves one entry, and a faith recording 443 counties three years running
+#   kept a single entry. Distinct values do accumulate correctly.
+#   So every entry is made unique by construction:
+#
+#       entry = stats_tracker_snapshot_base + county_count
+#
+#   where stats_tracker_snapshot_base is a global that increases by
+#   STATS_TRACKER_SCALE (10000) once per snapshot. Snapshot 1 writes
+#   10000 + count, snapshot 2 writes 20000 + count, and so on.
+#
+#   To decode an entry when rendering:
+#       snapshot number = floor(entry / 10000)
+#       county count    = entry mod 10000
+#
+#   LIMIT: this assumes no faith or culture ever holds 10000+ counties. The
+#   current map peaks around 4000 total counties, so there is ample headroom,
+#   but a much larger map mod would need a bigger scale factor. Numeric range
+#   is not a concern: values up to 20,000,000 were verified working in-game.
+###############################################################################
+
+stats_tracker_snapshot_effect = {
+
+	# --- Step 0: advance the global snapshot counter ---
+	# This is what makes each entry unique, so nothing collapses. It must happen
+	# before the append in step 3.
+	if = {
+		limit = { NOT = { has_global_variable = stats_tracker_snapshot_base } }
+		set_global_variable = { name = stats_tracker_snapshot_base value = 0 }
+	}
+	change_global_variable = { name = stats_tracker_snapshot_base add = 10000 }
+
+	# --- Step 1: zero the running counter on every faith and every culture ---
+	# Done first so that faiths/cultures created mid-campaign (reformations,
+	# hybrid cultures) have the variable defined before we change_variable it.
+	every_religion_global = {
+		every_faith = {
+			set_variable = { name = stats_tracker_running_count value = 0 }
+		}
+	}
+	every_culture_global = {
+		set_variable = { name = stats_tracker_running_count value = 0 }
+	}
+
+	# --- Step 2: ONE single pass over every county ---
+	# Each county bumps its own faith and its own culture by 1.
+	# This is deliberately NOT every_faith { every_county { ... } } - that would
+	# rescan a few thousand counties once per faith for the identical result.
+	# "?=" is the safe-scope operator: a county with no valid faith/culture is
+	# skipped instead of spamming error.log.
+	every_county = {
+		faith ?= {
+			change_variable = { name = stats_tracker_running_count add = 1 }
+		}
+		culture ?= {
+			change_variable = { name = stats_tracker_running_count add = 1 }
+		}
+	}
+
+	# --- Step 3: encode, append to the persistent history, reset ---
+	# TODO (deferred, known): these lists grow forever - one entry per faith and
+	# per culture per snapshot - and are read/written on every save from here on.
+	# Retention-capping or downsampling will be needed eventually. Not built yet
+	# on purpose; get the collection mechanism testable first.
+	#
+	# RESOLVED EDGE CASE: faiths and cultures created mid-campaign used to be a
+	# problem, because their lists were shorter and "list position N = year N"
+	# did not hold across objects. The snapshot number is now baked into every
+	# entry, so each data point knows which snapshot it belongs to regardless of
+	# when the object started being tracked. No special handling needed.
+
+	# --- DEBUG (temporary, safe to delete every debug_log line below) ---
+	debug_log = "SIMPLE_GRAPHS ===== county snapshot begin ====="
+	debug_log = stats_tracker_debug_snapshot_date
+
+	every_religion_global = {
+		every_faith = {
+			set_variable = {
+				name = stats_tracker_encoded
+				value = global_var:stats_tracker_snapshot_base
+			}
+			change_variable = {
+				name = stats_tracker_encoded
+				add = var:stats_tracker_running_count
+			}
+			add_to_variable_list = {
+				name = stats_tracker_county_history
+				target = var:stats_tracker_encoded
+			}
+			debug_log = stats_tracker_debug_faith
+			set_variable = { name = stats_tracker_running_count value = 0 }
+		}
+	}
+	every_culture_global = {
+		set_variable = {
+			name = stats_tracker_encoded
+			value = global_var:stats_tracker_snapshot_base
+		}
+		change_variable = {
+			name = stats_tracker_encoded
+			add = var:stats_tracker_running_count
+		}
+		add_to_variable_list = {
+			name = stats_tracker_county_history
+			target = var:stats_tracker_encoded
+		}
+		debug_log = stats_tracker_debug_culture
+		set_variable = { name = stats_tracker_running_count value = 0 }
+	}
+
+	debug_log = "SIMPLE_GRAPHS ===== county snapshot end ====="
+}

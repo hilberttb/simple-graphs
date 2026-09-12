@@ -1,0 +1,38 @@
+﻿namespace = stats_tracker
+
+###############################################################################
+# stats_tracker.1 - the recurring county-count snapshot.
+#
+# scope = none : this is world bookkeeping, it has no root character.
+#                (documented in game/events/_events.info)
+# hidden = yes : background event, no popup. _events.info also notes that
+#                non-character-scoped events generally need to be hidden.
+#
+# TIMING - why "years = 1" and not "days = 365":
+#   _events.info documents days/weeks/months/years as trigger_event delays, so
+#   years is a real, supported delay unit and the date arithmetic is left to
+#   the engine instead of being open-coded.
+#
+#   The concern about a flat day-count drifting off the anniversary does not
+#   apply to CK3 in any case: this engine has no leap years. The Jomini date
+#   code (jomini_historical_date.cpp) documents its own DaysPerYear constant as
+#   "Number of days per year, no leap years". A year is therefore always
+#   exactly 365 days, and the snapshot lands on the same calendar day forever.
+#   Vanilla history files do contain stray dates like 1132.2.29 and even
+#   1002.2.30, but those are data artifacts, not evidence of a leap calendar.
+###############################################################################
+
+stats_tracker.1 = {
+	scope = none
+	hidden = yes
+
+	immediate = {
+		stats_tracker_snapshot_effect = yes
+
+		# Re-arm for the same calendar day next year, indefinitely.
+		trigger_event = {
+			id = stats_tracker.1
+			years = 1
+		}
+	}
+}
