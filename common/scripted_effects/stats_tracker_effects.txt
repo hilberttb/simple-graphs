@@ -63,6 +63,27 @@ stats_tracker_snapshot_effect = {
 	}
 	change_global_variable = { name = stats_tracker_snapshot_index add = 1 }
 
+	# ADDED (generic enumeration): wipe the two object-registry lists so they are
+	# rebuilt from scratch below. Rebuilding rather than appending is what makes
+	# faiths/cultures created mid-campaign show up automatically, and it makes the
+	# de-duplication question moot - a fresh list cannot double up.
+	# See README_FAITH_CULTURE_ENUMERATION.md for why these hold SCOPES, not keys.
+	# Guarded because on the FIRST snapshot these lists have never existed, and
+	# whether clearing a never-created list is a silent no-op or an error.log
+	# entry is not something this project has verified. Vanilla's own clear sites
+	# (80_major_decisions_middle_europe.txt:837, game_start.txt:7915) are mostly
+	# unguarded, but in every one of them the list was definitely populated first,
+	# so they are not evidence either way. has_global_variable_list supports scope
+	# none, which is this event's scope (logs/triggers.log:655).
+	if = {
+		limit = { has_global_variable_list = simple_graphs_all_faiths }
+		clear_global_variable_list = simple_graphs_all_faiths
+	}
+	if = {
+		limit = { has_global_variable_list = simple_graphs_all_cultures }
+		clear_global_variable_list = simple_graphs_all_cultures
+	}
+
 	# --- Step 1: zero the running counter on every faith and every culture ---
 	# Done first so that faiths/cultures created mid-campaign (reformations,
 	# hybrid cultures) have the variable defined before we change_variable it.
@@ -127,11 +148,30 @@ stats_tracker_snapshot_effect = {
 			# existing variable.
 			stats_tracker_plain_and_segment_effect = yes
 
-			# ADDED: mirror catholic into global lists so the GUI can reach the
-			# data. GUI has no GetFaith('key') promote (checked against
-			# logs/data_types/*), so a per-faith list is unreachable from a .gui
-			# file; GetGlobalList('name') is the only path in. This is the
-			# "catholic-only hardcode" the prototype is scoped to.
+			# ADDED (generic enumeration): register THIS faith in the global
+			# registry list, as a scope. See stats_tracker_register_object_effect
+			# below for why this is a scope and not a key.
+			stats_tracker_register_object_effect = {
+				REGISTRY = simple_graphs_all_faiths
+			}
+
+			# RETAINED DELIBERATELY as the in-game cross-check for the generic
+			# path: the same faith's data reached two completely different ways
+			# must agree. Once that has been confirmed on a real save, this whole
+			# if-block and its two loc keys can be deleted.
+			#
+			# CORRECTION - the note that used to sit here claimed "GUI has no
+			# GetFaith('key') promote (checked against logs/data_types/*), so a
+			# per-faith list is unreachable from a .gui file; GetGlobalList is the
+			# only path in". Both halves are wrong, and that is what forced this
+			# hardcode:
+			#   - GetFaithByKey/GetCultureByKey/GetReligionByKey all exist
+			#     (data_types_uncategorized.txt:475, 427, 589). The earlier search
+			#     missed them because they are named Get...ByKey, not GetFaith(.
+			#   - a per-faith list IS reachable, via
+			#     Faith.MakeScope.GetList('name') - Faith.MakeScope at :61019,
+			#     Scope.GetList at data_types_script.txt:3429.
+			# Full write-up: README_FAITH_CULTURE_ENUMERATION.md
 			if = {
 				limit = { this = faith:catholic }
 				add_to_global_variable_list = {
@@ -176,8 +216,39 @@ stats_tracker_snapshot_effect = {
 		# here; the prototype renders one faith only.
 		stats_tracker_plain_and_segment_effect = yes
 
+		# ADDED (generic enumeration) - same as the faith branch.
+		stats_tracker_register_object_effect = {
+			REGISTRY = simple_graphs_all_cultures
+		}
+
 		set_variable = { name = stats_tracker_running_count value = 0 }
 	}
+
+	# ADDED (generic enumeration): log-side check, so the registries can be
+	# verified from debug.log without opening the window at all. There is no
+	# "size of global list" value to read directly, so we count by iterating.
+	# every_in_global_list is documented in logs/effects.log:853-855 as taking
+	# `variable = name` and supporting scope none, which is what this event is.
+	# Guarded for the same reason as the clears above: if nothing registered, the
+	# list does not exist and iterating it is unverified. A count of 0 in the log
+	# is then a real, meaningful result rather than an error.
+	set_global_variable = { name = simple_graphs_registry_faith_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = simple_graphs_all_faiths }
+		every_in_global_list = {
+			variable = simple_graphs_all_faiths
+			change_global_variable = { name = simple_graphs_registry_faith_count add = 1 }
+		}
+	}
+	set_global_variable = { name = simple_graphs_registry_culture_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = simple_graphs_all_cultures }
+		every_in_global_list = {
+			variable = simple_graphs_all_cultures
+			change_global_variable = { name = simple_graphs_registry_culture_count add = 1 }
+		}
+	}
+	debug_log = stats_tracker_debug_registry
 
 	debug_log = "SIMPLE_GRAPHS ===== county snapshot end ====="
 }
@@ -318,4 +389,86 @@ stats_tracker_plain_and_segment_effect = {
 	}
 
 	set_variable = { name = stats_tracker_prev_y value = var:stats_tracker_y_now }
+}
+
+
+###############################################################################
+# ADDED FOR GENERIC ENUMERATION - stats_tracker_register_object_effect
+#
+#   stats_tracker_register_object_effect = { REGISTRY = <global list name> }
+#
+# Called from inside the faith loop and the culture loop of
+# stats_tracker_snapshot_effect, in faith/culture scope, at the point where
+# var:stats_tracker_running_count still holds THIS snapshot's county count.
+#
+# WHAT IT IS FOR
+# --------------
+# The GUI needs SOME list to bind a datamodel to in order to answer "which
+# faiths/cultures exist, so a window can show or pick one". Script cannot build
+# a variable name at runtime, so "one global list per faith" was never possible.
+# The working answer is the inverse: ONE list whose ENTRIES ARE THE OBJECTS.
+#
+# Storing the SCOPE rather than the key is the whole trick, and it is what makes
+# this generic:
+#   - reformed faiths and hybrid/created cultures have engine-generated keys, so
+#     anything key-based is fragile exactly where this needs to be robust;
+#   - a stored scope needs no lookup at all. The GUI promotes it straight back
+#     with datacontext = "[Scope.Faith]" / "[Scope.Culture]"
+#     (data_types_script.txt:2923 and :2853), and can then read that object's
+#     OWN per-object lists with Faith.MakeScope.GetList('name')
+#     (Faith.MakeScope at data_types_uncategorized.txt:61019,
+#      Scope.GetList at data_types_script.txt:3429).
+#
+# This is not a new 1.19 mechanism and does not need one. It is exactly what
+# vanilla does in common/scripted_effects/03_dlc_fp2_scripted_effects.txt:
+#   - lines 10-23  every_culture_global  -> add_to_global_variable_list
+#   - lines 44-65  every_religion_global -> every_faith -> add_to_global_variable_list
+# i.e. the same iteration this mod already ran; vanilla just also stores the
+# scope. $REGISTRY$ substitution into `name =` is likewise vanilla-proven
+# (00_diarchy_scripted_effects.txt:60).
+#
+# 1.19's Ledger does have purpose-built engine enumerators
+# (LedgerWindow.GetFaiths / .GetCultures, window_ledger.gui:2278 / :2743) but
+# LedgerWindow is a window-scoped datacontext with no global accessor, so a mod
+# window cannot reach them. Full reasoning: README_FAITH_CULTURE_ENUMERATION.md
+#
+# THE FILTER
+# ----------
+# Registering every faith would list ~200 of them, nearly all holding zero
+# counties, which makes a picker useless. So an object is registered once it has
+# ever held at least one county, and the marker is STICKY: once set it is never
+# cleared, so an object that later drops to zero keeps its history reachable
+# instead of vanishing from the UI mid-campaign.
+#
+# To register everything unconditionally instead, delete the has_variable limit
+# on the second if-block. To register only objects holding counties RIGHT NOW,
+# change that limit to `var:stats_tracker_running_count > 0` and drop the first
+# if-block.
+#
+# Note this is a filter on WHAT GETS LISTED only. Data collection is untouched:
+# every faith and culture still gets its history appended every snapshot, as
+# before, whether or not it is registered.
+###############################################################################
+
+stats_tracker_register_object_effect = {
+
+	# Sticky marker: "this object has held at least one county at some point".
+	# var:x > 0 in a limit is vanilla syntax (00_decisions_effects.txt:1537).
+	if = {
+		limit = { var:stats_tracker_running_count > 0 }
+		set_variable = { name = stats_tracker_ever_tracked value = 1 }
+	}
+
+	# save_scope_as then target = scope:... is copied from the vanilla fp2
+	# effects above rather than using `target = this`, because that is the form
+	# vanilla actually ships for this exact job. The scope name is reused every
+	# iteration, which is fine and is also what vanilla does.
+	if = {
+		limit = { has_variable = stats_tracker_ever_tracked }
+		save_scope_as = stats_tracker_registry_obj
+		add_to_global_variable_list = {
+			name = $REGISTRY$
+			target = scope:stats_tracker_registry_obj
+		}
+	}
 }

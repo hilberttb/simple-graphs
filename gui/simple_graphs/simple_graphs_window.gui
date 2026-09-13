@@ -110,7 +110,10 @@ window = {
 	datacontext = "[GetVariableSystem]"
 
 	parentanchor = center
-	size = { 680 620 }
+	# Widened from 680x620 to fit a second column. Every widget in the original
+	# column is absolutely positioned, so none of them move; the close button is
+	# parentanchor = top|right and follows the new edge on its own.
+	size = { 1180 700 }
 	layer = windows_layer
 	movable = yes
 
@@ -355,6 +358,227 @@ window = {
 					item = {
 						widget = {
 							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[FixedPointToInt( Scope.GetValue )]"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	### RIGHT COLUMN - the generic path #########################################
+	# Everything left of x=700 is the original catholic-hardcoded prototype and is
+	# untouched. Everything here reaches the SAME data without naming any faith or
+	# culture, and the two columns are side by side on purpose so they can be read
+	# against each other.
+	#
+	# This is also a diagnostic ladder, in the same spirit as the reference strip
+	# at the top. Read it top-down; the first rung that is wrong is the broken one:
+	#
+	#   Rung A  "faiths:" / "cultures:" counts are non-zero
+	#           => script wrote the registries. GetGlobalList reaches them.
+	#              Zero here means the script side never ran - check that a
+	#              snapshot has happened at all ("snapshots taken" on the left).
+	#
+	#   Rung B  rows have NAMES in them
+	#           => datacontext = "[Scope.Faith]" promotes a stored scope back to
+	#              a real Faith. This is the single load-bearing assumption of the
+	#              whole approach. Blank names with a correct count in rung A
+	#              means the promote failed and nothing else here will work.
+	#
+	#   Rung C  the "pts" and "seg" columns are non-zero
+	#           => Faith.MakeScope.GetList('name') reads that object's OWN
+	#              per-object list. This is what makes the global catholic mirror
+	#              unnecessary. "pts" should equal "snapshots taken" on the left
+	#              for any faith tracked since the start, and "seg" should be one
+	#              less (N snapshots produce N-1 segments).
+	#
+	#   Rung D  the cross-check panel below matches the left column exactly
+	#           => the generic path and the hardcoded path agree on real data.
+	text_single = {
+		position = { 700 14 }
+		text = "SIMPLE_GRAPHS_LBL_GENERIC"
+	}
+
+	widget = {
+		name = "simple_graphs_generic_counters"
+		position = { 700 46 }
+		size = { 460 20 }
+
+		# RUNG A
+		text_single = {
+			position = { 0 0 }
+			text = "SIMPLE_GRAPHS_LBL_FAITHCOUNT"
+		}
+		text_single = {
+			position = { 110 0 }
+			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_all_faiths' ) )]"
+		}
+		text_single = {
+			position = { 180 0 }
+			text = "SIMPLE_GRAPHS_LBL_CULTCOUNT"
+		}
+		text_single = {
+			position = { 300 0 }
+			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_all_cultures' ) )]"
+		}
+	}
+
+	scrollbox = {
+		name = "simple_graphs_generic_scroll"
+		position = { 700 72 }
+		size = { 460 314 }
+
+		blockoverride "scrollbox_content"
+		{
+			vbox = {
+				name = "simple_graphs_generic_stack"
+
+				widget = {
+					size = { 420 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SIMPLE_GRAPHS_LBL_GENERICCOLS"
+					}
+				}
+
+				# --- every faith, with no faith named anywhere ---------------
+				vbox = {
+					name = "simple_graphs_all_faith_rows"
+					datamodel = "[GetGlobalList( 'simple_graphs_all_faiths' )]"
+
+					item = {
+						widget = {
+							size = { 420 20 }
+
+							# RUNG B. The stored entry is a Scope; this promotes
+							# it back to the Faith it points at.
+							# (data_types_script.txt:2923)
+							datacontext = "[Scope.Faith]"
+
+							text_single = {
+								position = { 0 0 }
+								text = "[Faith.GetNameNoTooltip]"
+							}
+							# current county count, read off the faith's own
+							# variable rather than any global mirror.
+							# Scope.GetVariable at data_types_script.txt:2972.
+							text_single = {
+								position = { 200 0 }
+								visible = "[Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
+								text = "[FixedPointToInt( Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
+							}
+							# RUNG C - per-object lists, read generically.
+							text_single = {
+								position = { 280 0 }
+								text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+							}
+							text_single = {
+								position = { 350 0 }
+								text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+							}
+						}
+					}
+				}
+
+				# --- every culture, same shape ------------------------------
+				widget = {
+					size = { 420 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SIMPLE_GRAPHS_LBL_CULTCOLS"
+					}
+				}
+
+				vbox = {
+					name = "simple_graphs_all_culture_rows"
+					datamodel = "[GetGlobalList( 'simple_graphs_all_cultures' )]"
+
+					item = {
+						widget = {
+							size = { 420 20 }
+
+							datacontext = "[Scope.Culture]"
+
+							text_single = {
+								position = { 0 0 }
+								text = "[Culture.GetNameNoTooltip]"
+							}
+							text_single = {
+								position = { 200 0 }
+								visible = "[Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
+								text = "[FixedPointToInt( Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
+							}
+							text_single = {
+								position = { 280 0 }
+								text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+							}
+							text_single = {
+								position = { 350 0 }
+								text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	### RUNG D - cross-check ####################################################
+	# Same faith, same numbers, reached a completely different way: by KEY, with
+	# no global mirror list involved. These rows must match the "plain points"
+	# rows in the left column exactly, value for value and in the same order.
+	#
+	# This panel also disproves the old note in stats_tracker_effects.txt that
+	# said GUI has no faith-by-key promote. GetFaithByKey is a global promote
+	# returning a real Faith (data_types_uncategorized.txt:475) - it is simply
+	# named Get...ByKey rather than GetFaith(.
+	#
+	# Note the key route is used HERE ONLY, as a check. The registry above
+	# deliberately stores scopes instead, because runtime-created faiths and
+	# hybrid cultures have engine-generated keys.
+	text_single = {
+		position = { 700 394 }
+		text = "SIMPLE_GRAPHS_LBL_XCHECK"
+	}
+
+	scrollbox = {
+		name = "simple_graphs_xcheck_scroll"
+		position = { 700 420 }
+		size = { 460 256 }
+
+		blockoverride "scrollbox_content"
+		{
+			vbox = {
+				name = "simple_graphs_xcheck_stack"
+
+				widget = {
+					size = { 420 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SIMPLE_GRAPHS_LBL_XCHECKCOLS"
+					}
+				}
+
+				vbox = {
+					name = "simple_graphs_xcheck_rows"
+					datamodel = "[GetFaithByKey( 'catholic' ).MakeScope.GetList( 'stats_tracker_county_history_plain' )]"
+
+					item = {
+						widget = {
+							size = { 420 20 }
 
 							text_single = {
 								position = { 0 0 }

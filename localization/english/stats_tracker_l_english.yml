@@ -4,12 +4,13 @@
  stats_tracker_debug_culture:0 "SIMPLE_GRAPHS CULTURE [THIS.Culture.GetNameNoTooltip] counties=[THIS.Var('stats_tracker_running_count').GetValue] enc=[THIS.Var('stats_tracker_encoded').GetValue]"
  stats_tracker_debug_catholic:0 "SIMPLE_GRAPHS_RENDER catholic counties=[THIS.Var('stats_tracker_running_count').GetValue] plain=[THIS.Var('stats_tracker_plain_entry').GetValue] y_now=[THIS.Var('stats_tracker_y_now').GetValue]"
  stats_tracker_debug_catholic_seg:0 "SIMPLE_GRAPHS_RENDER catholic segment packed=[THIS.Var('stats_tracker_seg_entry').GetValue] (decode: y_start = packed/1000 mod 1000, y_end = packed mod 1000)"
+ stats_tracker_debug_registry:0 "SIMPLE_GRAPHS_REGISTRY faiths=[GetGlobalVariable('simple_graphs_registry_faith_count').GetValue] cultures=[GetGlobalVariable('simple_graphs_registry_culture_count').GetValue]"
 
 # ---- renderer UI ------------------------------------------------------------
 # No square brackets in any of these literal labels: brackets are data-function
 # syntax, not text (README_DATA_COLLECTION.md gotcha 5).
- SIMPLE_GRAPHS_OPEN_BUTTON:0 "County graph (catholic)"
- SIMPLE_GRAPHS_WINDOW_TITLE:0 "Simple Graphs - catholic counties over time"
+ SIMPLE_GRAPHS_OPEN_BUTTON:0 "County graph"
+ SIMPLE_GRAPHS_WINDOW_TITLE:0 "Simple Graphs - left column is the catholic hardcode, right column is generic"
  SIMPLE_GRAPHS_CLOSE:0 "Close"
  SIMPLE_GRAPHS_LBL_REFS:0 "Reference strip - 3 strokes = line, FloatToCVector2f, int math"
  SIMPLE_GRAPHS_LBL_PLOT:0 "Plot - one segment per snapshot pair, oldest at left. Higher = more counties."
@@ -18,3 +19,14 @@
  SIMPLE_GRAPHS_LBL_PLAINCOUNT:0 "plain points:"
  SIMPLE_GRAPHS_LBL_SEGCOLS:0 "idx / packed entry / y start / y end"
  SIMPLE_GRAPHS_LBL_PLAINCOLS:0 "idx / stored value / counties"
+
+# ---- generic enumeration (right column) -------------------------------------
+# Rung A is the two counts, rung B is the names column, rung C is pts/seg,
+# rung D is the cross-check panel. See the comments in simple_graphs_window.gui.
+ SIMPLE_GRAPHS_LBL_GENERIC:0 "GENERIC PATH - no faith or culture named anywhere below"
+ SIMPLE_GRAPHS_LBL_FAITHCOUNT:0 "faiths:"
+ SIMPLE_GRAPHS_LBL_CULTCOUNT:0 "cultures:"
+ SIMPLE_GRAPHS_LBL_GENERICCOLS:0 "FAITHS - name / counties / pts / seg"
+ SIMPLE_GRAPHS_LBL_CULTCOLS:0 "CULTURES - name / counties / pts / seg"
+ SIMPLE_GRAPHS_LBL_XCHECK:0 "CROSS-CHECK - catholic by key. Must match plain points on the left."
+ SIMPLE_GRAPHS_LBL_XCHECKCOLS:0 "idx / stored value / counties"
