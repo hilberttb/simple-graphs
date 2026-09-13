@@ -1,0 +1,281 @@
+﻿###############################################################################
+# Simple Graphs - data collection
+#
+# Counts how many counties belong to each faith and each culture, and appends
+# that count to a per-faith / per-culture history list.
+#
+# Verified against CK3 1.19.0.6 (Scribe) vanilla script. Notes on the
+# non-obvious names used here, because CK3 fails silently on wrong names:
+#   - every_county          : global list of ALL counties in the world.
+#                             (vanilla: common/scripted_effects/00_history_effects.txt)
+#   - every_culture_global  : global list of all cultures. NOT "every_culture",
+#                             which does not exist.
+#   - every_religion_global / every_faith : there is NO "every_faith_global".
+#                             Faiths are only reachable per-religion, so the
+#                             global sweep must be nested exactly like this.
+#                             (vanilla: common/scripted_effects/00_game_rule_effects.txt)
+#   - a county carries its own faith/culture directly; we read them off the
+#     county title, NOT off its holder.
+#
+# STORAGE ENCODING - important, read before changing anything here.
+#   Full write-up, gotchas and test procedure: README_DATA_COLLECTION.md
+#   add_to_variable_list DE-DUPLICATES by value: it is a set, not an append-only
+#   sequence. This was confirmed in-game - appending 9 twice to a fresh list
+#   leaves one entry, and a faith recording 443 counties three years running
+#   kept a single entry. Distinct values do accumulate correctly.
+#   So every entry is made unique by construction:
+#
+#       entry = sg_snapshot_base + county_count
+#
+#   where sg_snapshot_base is a global that increases by
+#   STATS_TRACKER_SCALE (10000) once per snapshot. Snapshot 1 writes
+#   10000 + count, snapshot 2 writes 20000 + count, and so on.
+#
+#   To decode an entry when rendering:
+#       snapshot number = floor(entry / 10000)
+#       county count    = entry mod 10000
+#
+#   LIMIT: this assumes no faith or culture ever holds 10000+ counties. The
+#   current map peaks around 4000 total counties, so there is ample headroom,
+#   but a much larger map mod would need a bigger scale factor. Numeric range
+#   is not a concern: values up to 20,000,000 were verified working in-game.
+###############################################################################
+
+sg_c_faithculture_snapshot_effect = {
+
+	# --- Step 0: the snapshot counters ---
+	# NOT DONE HERE ANY MORE. sg_snapshot_base and sg_snapshot_index are
+	# advanced by sg_engine_begin_snapshot_effect, which sg_wiring.txt calls
+	# once per snapshot BEFORE any consumer runs. They are engine state: every
+	# consumer's points are tagged with the same sg_snapshot_index, which is
+	# what keeps two consumers in one snapshot rather than two.
+	#
+	# So this effect must not advance them, and must not be called outside
+	# sg_snapshot_collect_effect - calling it directly would append points
+	# tagged with the previous snapshot's index, colliding with what is already
+	# stored. To take a snapshot by hand, run:
+	#     effect sg_snapshot_collect_effect = yes
+
+	# ADDED (generic enumeration): wipe the two object-registry lists so they are
+	# rebuilt from scratch below. Rebuilding rather than appending is what makes
+	# faiths/cultures created mid-campaign show up automatically, and it makes the
+	# de-duplication question moot - a fresh list cannot double up.
+	# See README_FAITH_CULTURE_ENUMERATION.md for why these hold SCOPES, not keys.
+	# Guarded because on the FIRST snapshot these lists have never existed, and
+	# whether clearing a never-created list is a silent no-op or an error.log
+	# entry is not something this project has verified. Vanilla's own clear sites
+	# (80_major_decisions_middle_europe.txt:837, game_start.txt:7915) are mostly
+	# unguarded, but in every one of them the list was definitely populated first,
+	# so they are not evidence either way. has_global_variable_list supports scope
+	# none, which is this event's scope (logs/triggers.log:655).
+	if = {
+		limit = { has_global_variable_list = sg_faith_registry }
+		clear_global_variable_list = sg_faith_registry
+	}
+	if = {
+		limit = { has_global_variable_list = sg_culture_registry }
+		clear_global_variable_list = sg_culture_registry
+	}
+
+	# --- Step 1: zero the running counter on every faith and every culture ---
+	# Done first so that faiths/cultures created mid-campaign (reformations,
+	# hybrid cultures) have the variable defined before we change_variable it.
+	every_religion_global = {
+		every_faith = {
+			set_variable = { name = sg_faithculture_running_count value = 0 }
+		}
+	}
+	every_culture_global = {
+		set_variable = { name = sg_faithculture_running_count value = 0 }
+	}
+
+	# --- Step 2: ONE single pass over every county ---
+	# Each county bumps its own faith and its own culture by 1.
+	# This is deliberately NOT every_faith { every_county { ... } } - that would
+	# rescan a few thousand counties once per faith for the identical result.
+	# "?=" is the safe-scope operator: a county with no valid faith/culture is
+	# skipped instead of spamming error.log.
+	#
+	# ---------------------------------------------------------------------
+	# THE limit IS A BUG FIX, NOT A TUNING CHOICE. Read before removing it.
+	# ---------------------------------------------------------------------
+	# every_county yields every county-TIER TITLE, not every county on the map.
+	# That includes the ~1227 c_nf_* noble-family titular titles (Japanese,
+	# Korean, Chinese and other noble houses), which have no de jure liege and
+	# no province but DO resolve a faith and a culture - so about 605 of them
+	# were silently counted here as if they were real map counties.
+	#
+	# MEASURED 2026-09-13 on the 1066 bookmark, by a landed_title probe that
+	# counted the same sweep three ways:
+	#   every_county yields      4865   every title every_county hands back
+	#   resolve faith + culture  4081   <- what this pass used to total
+	#   resolve a de jure kingdom 3476   <- real map counties
+	#   defined in landed_titles 4703   = 3476 real + 1227 c_nf_ titular
+	# So the old totals overcounted real map counties by 605.
+	#
+	# A titular title has no de jure liege, so "has a de jure kingdom" is
+	# exactly the filter that separates the two sets.
+	#
+	# IT MUST BE A TRIGGER, NOT A SCOPE SWITCH. The probe wrote
+	# `kingdom ?= { ... }`, which was right THERE because its metric was
+	# per-kingdom and entering the kingdom was the point. Here it would be
+	# wrong: the counter being bumped belongs to the COUNTY's own faith and
+	# culture, so this pass must stay in county scope throughout.
+	# `exists = <scope link>` is the test that resolves the link without
+	# entering it - triggers.log:600-602, "Checks whether the specified scope
+	# target exists (check for not being the null object)".
+	#
+	# Both halves are vanilla-proven in exactly this shape:
+	#   every_county = { limit = { <triggers> } <effects> }   effects.log:678-682
+	#                   ("Supported Targets: landed_title")
+	#   exists = kingdom inside a county iterator's limit
+	#     00_major_decisions_scripted_effects_3.txt:561, inside
+	#     every_sub_realm_county = { limit = { exists = kingdom ... } }
+	#   kingdom - "Get de jure kingdom title of scoped title or province",
+	#     Input Scopes: landed_title, province   event_targets.log:1397-1399
+	#
+	# KNOCK-ON, intended: the registry filter downstream is
+	# var:sg_faithculture_running_count > 0, so a faith or culture whose only
+	# holdings were titular c_nf_ titles no longer registers and no longer
+	# appears in the picker. That is correct - it never held map counties.
+	every_county = {
+		limit = { exists = kingdom }
+
+		faith ?= {
+			change_variable = { name = sg_faithculture_running_count add = 1 }
+		}
+		culture ?= {
+			change_variable = { name = sg_faithculture_running_count add = 1 }
+		}
+	}
+
+	# --- Step 3: encode, append to the persistent history, reset ---
+	# TODO (deferred, known): these lists grow forever - one entry per faith and
+	# per culture per snapshot - and are read/written on every save from here on.
+	# Retention-capping or downsampling will be needed eventually. Not built yet
+	# on purpose; get the collection mechanism testable first.
+	#
+	# RESOLVED EDGE CASE: faiths and cultures created mid-campaign used to be a
+	# problem, because their lists were shorter and "list position N = year N"
+	# did not hold across objects. The snapshot number is now baked into every
+	# entry, so each data point knows which snapshot it belongs to regardless of
+	# when the object started being tracked. No special handling needed.
+
+	# --- DEBUG (temporary, safe to delete every debug_log line below) ---
+	debug_log = "SIMPLE_GRAPHS ===== county snapshot begin ====="
+	debug_log = sg_engine_debug_snapshot_date
+
+	every_religion_global = {
+		every_faith = {
+			set_variable = {
+				name = sg_faithculture_encoded
+				value = global_var:sg_snapshot_base
+			}
+			change_variable = {
+				name = sg_faithculture_encoded
+				add = var:sg_faithculture_running_count
+			}
+			debug_log = sg_c_fc_debug_faith
+
+			# Hand this faith's count to the shared storage layer. Runs while
+			# running_count is still live, before the reset below.
+			#
+			# This is a DIRECT call into the engine effect. It used to go
+			# through a stats_tracker_plain_and_segment_effect wrapper that did
+			# nothing but pass these same seven arguments; the wrapper is gone
+			# and the arguments now sit where a reader can see them.
+			#
+			# Y_SCALE = 0.3 is a statement about this consumer's range, not an
+			# engine constant: county counts per faith run 0..~1000, so 0.3
+			# spans the full 300px plot. Y_MAX = 300 is the plot height the
+			# window draws, and must not change without changing the window.
+			sg_engine_append_point_effect = {
+				VALUE_VAR  = sg_faithculture_running_count
+				PLAIN_LIST = sg_faithculture_counties
+				PLAIN_VAR  = sg_faithculture_counties_now
+				SEG_LIST   = sg_faithculture_counties_seg
+				PREV_Y_VAR = sg_faithculture_prev_y
+				Y_SCALE    = 0.3
+				Y_MAX      = 300
+			}
+
+			# Register THIS faith in the global registry list, as a scope rather
+			# than a key - see sg_engine_snapshot.txt for why, and for what the
+			# sticky MARKER_VAR filter does.
+			sg_engine_register_object_effect = {
+				REGISTRY   = sg_faith_registry
+				VALUE_VAR  = sg_faithculture_running_count
+				MARKER_VAR = sg_faithculture_ever_tracked
+			}
+
+			set_variable = { name = sg_faithculture_running_count value = 0 }
+		}
+	}
+	every_culture_global = {
+		set_variable = {
+			name = sg_faithculture_encoded
+			value = global_var:sg_snapshot_base
+		}
+		change_variable = {
+			name = sg_faithculture_encoded
+			add = var:sg_faithculture_running_count
+		}
+		debug_log = sg_c_fc_debug_culture
+
+		# Same direct call as the faith branch, with the same arguments. The two
+		# branches share every name because they write to DISJOINT SETS OF
+		# OBJECTS - these are per-object variables, and no object is both a
+		# faith and a culture. PREV_Y_VAR in particular is safe to share for
+		# that reason and for that reason only; two consumers that could ever
+		# touch the same object would need distinct PREV_Y_VAR names.
+		sg_engine_append_point_effect = {
+			VALUE_VAR  = sg_faithculture_running_count
+			PLAIN_LIST = sg_faithculture_counties
+			PLAIN_VAR  = sg_faithculture_counties_now
+			SEG_LIST   = sg_faithculture_counties_seg
+			PREV_Y_VAR = sg_faithculture_prev_y
+			Y_SCALE    = 0.3
+			Y_MAX      = 300
+		}
+
+		# Same as the faith branch. MARKER_VAR is shared with it for the same
+		# reason PREV_Y_VAR is: no object is both a faith and a culture, so the
+		# two branches can never collide on one object's variables.
+		sg_engine_register_object_effect = {
+			REGISTRY   = sg_culture_registry
+			VALUE_VAR  = sg_faithculture_running_count
+			MARKER_VAR = sg_faithculture_ever_tracked
+		}
+
+		set_variable = { name = sg_faithculture_running_count value = 0 }
+	}
+
+	# ADDED (generic enumeration): log-side check, so the registries can be
+	# verified from debug.log without opening the window at all. There is no
+	# "size of global list" value to read directly, so we count by iterating.
+	# every_in_global_list is documented in logs/effects.log:853-855 as taking
+	# `variable = name` and supporting scope none, which is what this event is.
+	# Guarded for the same reason as the clears above: if nothing registered, the
+	# list does not exist and iterating it is unverified. A count of 0 in the log
+	# is then a real, meaningful result rather than an error.
+	set_global_variable = { name = sg_faith_registry_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = sg_faith_registry }
+		every_in_global_list = {
+			variable = sg_faith_registry
+			change_global_variable = { name = sg_faith_registry_count add = 1 }
+		}
+	}
+	set_global_variable = { name = sg_culture_registry_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = sg_culture_registry }
+		every_in_global_list = {
+			variable = sg_culture_registry
+			change_global_variable = { name = sg_culture_registry_count add = 1 }
+		}
+	}
+	debug_log = sg_c_fc_debug_registry
+
+	debug_log = "SIMPLE_GRAPHS ===== county snapshot end ====="
+}
+

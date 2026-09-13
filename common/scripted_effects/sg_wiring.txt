@@ -1,0 +1,53 @@
+﻿###############################################################################
+# Simple Graphs - WIRING: the one place the engine and its consumers meet.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS FILE EXISTS - a deviation from the layout in
+# README_GENERICITY_INVESTIGATION.md Part 3, and the reason for it
+# ---------------------------------------------------------------------------
+# Part 3 places the snapshot event in events/sg_engine_events.txt and calls the
+# scheduling ENGINE. But an event has to call SOMETHING, and the only thing
+# there is to call is a consumer's collection pass. Written the obvious way,
+# events/sg_engine_events.txt would contain the name
+# sg_c_faithculture_snapshot_effect - which breaks the second of the two rules
+# the layout is built on:
+#
+#   2. No sg_c_* file may be referenced by an sg_engine_* file.
+#      Dependencies point one way only.
+#
+# So the engine event calls this fixed, consumer-free hook instead, and the
+# hook is the single file that is allowed to know both sides. It is
+# deliberately NOT named sg_engine_* or sg_c_* , because it is neither: it is
+# the integration point, and pretending it belongs to one side or the other is
+# what would make the rule unenforceable.
+#
+# The engine therefore names no consumer, and a consumer names no schedule.
+#
+# ---------------------------------------------------------------------------
+# ADDING A SECOND CONSUMER
+# ---------------------------------------------------------------------------
+# Add one line below. That is the entire integration surface:
+#
+#     sg_snapshot_collect_effect = {
+#         sg_engine_begin_snapshot_effect = yes
+#         sg_c_faithculture_snapshot_effect = yes
+#         sg_c_yourthing_snapshot_effect = yes      <-- the new line
+#     }
+#
+# sg_engine_begin_snapshot_effect MUST stay first. It advances
+# sg_snapshot_index, which every consumer's appended point is tagged with, so
+# a consumer that ran before it would tag its points with the PREVIOUS
+# snapshot's index and collide with what is already stored.
+#
+# Calling it once here rather than once per consumer is also what keeps two
+# consumers in the SAME snapshot rather than two snapshots apart.
+###############################################################################
+
+sg_snapshot_collect_effect = {
+
+	# Engine first: advance the snapshot counters everything else is tagged by.
+	sg_engine_begin_snapshot_effect = yes
+
+	# Then every consumer, in any order.
+	sg_c_faithculture_snapshot_effect = yes
+}

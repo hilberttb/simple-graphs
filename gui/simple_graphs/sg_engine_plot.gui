@@ -1,0 +1,65 @@
+﻿###############################################################################
+# Simple Graphs - ENGINE: the plot's line style.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS FILE HOLDS THE STYLE AND NOT THE DECODE EXPRESSIONS
+# ---------------------------------------------------------------------------
+# Part 3 of the investigation proposed this file as "line template + decode
+# expressions". Only the first half moved, deliberately.
+#
+# The decode expressions cannot move as they stand. They live inside `from` and
+# `to` on a `line`, and the widget around them carries the `datamodel` and the
+# `visible` that name a specific object type. Lifting them out means declaring
+# a `type` here with a `block` for the datamodel, and having the consumer
+# supply it via `blockoverride`. That is the "one template instantiated N
+# times" mitigation the investigation flagged as the realistic ceiling - and
+# explicitly did NOT attempt or verify.
+#
+# This repo has never declared its own `type` with its own `block`. A bad one
+# fails the way everything in CK3 GUI fails: silently, with an empty
+# gui_warnings.log and a plot that simply does not draw. Betting the one
+# feature that works on an unverified mechanism, during a change that is
+# otherwise a rename, is the trade this file declines to make. The expressions
+# stay inline in the consumer window, with the packing contract documented in
+# sg_engine_storage.txt, which is where the encoding they undo is defined.
+#
+# ---------------------------------------------------------------------------
+# WHY A SEPARATE FILE IS SAFE, VERIFIED RATHER THAN ASSUMED
+# ---------------------------------------------------------------------------
+# The consumer window references sg_engine_line_data from a DIFFERENT file that
+# sorts alphabetically BEFORE this one (sg_c_... before sg_engine_...), so this
+# only works if CK3 resolves templates after parsing every .gui rather than in
+# load order. It does. In the 1.19.0.6 install there are 27 same-directory
+# cases in game/gui where the using file sorts before the defining file, e.g.
+#   map_icon_layer.gui       uses combat_prediction_tooltip
+#     defined in             map_icon_layer_templates.gui
+#   chariot_race_widget_types.gui  uses PivotalMomentTransitionAnimation
+#     defined in                    tournament_widget_types.gui
+#   animation.gui            uses Mask_Rough_Edges
+#     defined in             backgrounds.gui
+# plus 3,212 cross-file template uses overall. Load order does not constrain
+# template resolution.
+#
+# The name was checked for collisions against game/gui, jomini/gui and
+# clausewitz/gui: zero hits. GUI is first-in-only-served, so a collision would
+# mean this file is silently ignored with no error.
+#
+# The vanilla templates this one follows (Line_Domicile_*, which render inside
+# a scrollbox at window_domicile.gui:3508) do NOT set effectname, i.e. they use
+# the default line effect rather than PdxGuiLineScreenSpace. This one matches.
+###############################################################################
+
+template sg_engine_line_data
+{
+	width = 3
+	line_cap = yes
+	color = { 1.0 1.0 1.0 1.0 }
+	texture = "gfx/lines/white.dds"
+	uv_scale = { 1.0 1.0 }
+	mask = "gfx/lines/white.dds"
+	mask_uv_scale = { 1.0 1.0 }
+}

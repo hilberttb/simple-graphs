@@ -16,7 +16,7 @@
 ###############################################################################
 
 widget = {
-	name = "simple_graphs_toggle_button"
+	name = "sg_toggle_button"
 	datacontext = "[GetVariableSystem]"
 
 	parentanchor = top|hcenter
@@ -32,9 +32,9 @@ widget = {
 	visible = "[IsInGame]"
 
 	button_standard = {
-		name = "simple_graphs_toggle_button_press"
+		name = "sg_toggle_button_press"
 		size = { 220 34 }
-		text = "SIMPLE_GRAPHS_OPEN_BUTTON"
-		onclick = "[GetVariableSystem.Toggle( 'simple_graphs_window_open' )]"
+		text = "SG_C_FC_OPEN_BUTTON"
+		onclick = "[GetVariableSystem.Toggle( 'sg_window_open' )]"
 	}
 }

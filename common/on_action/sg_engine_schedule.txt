@@ -4,9 +4,10 @@
 # We hook on_game_start_after_lobby rather than on_game_start. Both fire on the
 # first in-game day, but vanilla documents on_game_start_after_lobby as running
 # once the lobby is exited, i.e. after game rules have been applied. That
-# matters here: several vanilla game rules rewrite county faiths at game start
-# (see eliminate_&_replace_faith_effect), so snapshotting after the lobby gives
-# a day-one count of the world the player is actually going to play.
+# matters here: several vanilla game rules rewrite map data at game start (the
+# "eliminate and replace" family of game-rule effects), so snapshotting after
+# the lobby gives a day-one reading of the world the player is actually
+# going to play.
 #
 # We do NOT append an "effect" block to the vanilla on_action - per
 # common/on_action/_on_actions.info you cannot have two effect blocks on the
@@ -16,9 +17,9 @@
 ###############################################################################
 
 on_game_start_after_lobby = {
-	on_actions = { stats_tracker_start }
+	on_actions = { sg_engine_start }
 }
 
-stats_tracker_start = {
-	events = { stats_tracker.1 }
+sg_engine_start = {
+	events = { sg_engine.1 }
 }

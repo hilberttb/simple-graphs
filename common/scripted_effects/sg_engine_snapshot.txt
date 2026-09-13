@@ -1,0 +1,119 @@
+﻿###############################################################################
+# Simple Graphs - ENGINE: the snapshot clock and the registry helper.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+# Nothing below knows what is being measured or what kind of object is being
+# measured. Every name a consumer owns arrives as a parameter.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_begin_snapshot_effect
+# ---------------------------------------------------------------------------
+# Advances the two global per-snapshot counters. MUST run before any consumer
+# appends a point in the same snapshot, because both encodings in
+# sg_engine_storage.txt read sg_snapshot_index as their uniquifying term.
+#
+#   sg_snapshot_index   1, 2, 3, ...   the snapshot NUMBER. This is the one the
+#                                      renderer needs: it tags plain values and
+#                                      is the high-order term of a packed
+#                                      segment.
+#   sg_snapshot_base    10000, 20000, ...  the older scaled counter, kept
+#                                      because a consumer may still encode
+#                                      base + value as a cross-check.
+#
+# Both are guarded on first use because neither global exists until the first
+# snapshot runs.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_register_object_effect
+# ---------------------------------------------------------------------------
+#   sg_engine_register_object_effect = {
+#       REGISTRY   = <global list name>   the list of objects to append to
+#       VALUE_VAR  = <variable name>      this object's metric for this snapshot
+#       MARKER_VAR = <variable name>      the sticky "has counted" marker
+#   }
+#
+# Called in the scope of ONE object, while VALUE_VAR still holds this
+# snapshot's number for it.
+#
+# WHAT IT IS FOR
+# --------------
+# The GUI needs some list to bind a datamodel to in order to answer "which
+# objects exist, so a window can show or pick one". Script cannot build a
+# variable name at runtime, so "one global list per object" was never possible.
+# The working answer is the inverse: ONE list whose ENTRIES ARE THE OBJECTS.
+#
+# Storing the SCOPE rather than a key is the whole trick, and it is what makes
+# this generic:
+#   - objects created at runtime have engine-generated keys, so anything
+#     key-based is fragile exactly where this needs to be robust;
+#   - a stored scope needs no lookup at all. The GUI promotes it straight back
+#     with datacontext = "[Scope.<Type>]" and can then read that object's OWN
+#     per-object lists with <Type>.MakeScope.GetList('name')
+#     (Scope.GetList, data_types_script.txt:3429).
+#
+# This is not a new 1.19 mechanism and does not need one. It is exactly what
+# vanilla does in common/scripted_effects/03_dlc_fp2_scripted_effects.txt,
+# lines 10-23 and 44-65: the same iteration, also storing the scope.
+# $REGISTRY$ substitution into `name =` is likewise vanilla-proven
+# (00_diarchy_scripted_effects.txt:60).
+#
+# THE FILTER
+# ----------
+# Registering every object would list hundreds of them, nearly all measuring
+# zero, which makes a picker useless. So an object is registered once its
+# metric has been above zero at least once, and the marker is STICKY: once set
+# it is never cleared, so an object that later drops back to zero keeps its
+# history reachable instead of vanishing from the UI mid-campaign.
+#
+# To register everything unconditionally instead, delete the has_variable limit
+# on the second if-block. To register only objects above zero RIGHT NOW, change
+# that limit to `var:$VALUE_VAR$ > 0` and drop the first if-block.
+#
+# Note this is a filter on WHAT GETS LISTED only. Collection is untouched:
+# every object still gets its history appended every snapshot, whether or not
+# it is registered.
+#
+# MARKER_VAR is a parameter rather than a fixed name because it PERSISTS
+# between invocations, exactly like PREV_Y_VAR in sg_engine_storage.txt. Two
+# consumers that could ever measure the same object must not share it.
+###############################################################################
+
+sg_engine_begin_snapshot_effect = {
+
+	if = {
+		limit = { NOT = { has_global_variable = sg_snapshot_base } }
+		set_global_variable = { name = sg_snapshot_base value = 0 }
+	}
+	change_global_variable = { name = sg_snapshot_base add = 10000 }
+
+	if = {
+		limit = { NOT = { has_global_variable = sg_snapshot_index } }
+		set_global_variable = { name = sg_snapshot_index value = 0 }
+	}
+	change_global_variable = { name = sg_snapshot_index add = 1 }
+}
+
+sg_engine_register_object_effect = {
+
+	# Sticky marker: "this object's metric has been above zero at some point".
+	# var:x > 0 in a limit is vanilla syntax (00_decisions_effects.txt:1537).
+	if = {
+		limit = { var:$VALUE_VAR$ > 0 }
+		set_variable = { name = $MARKER_VAR$ value = 1 }
+	}
+
+	# save_scope_as then target = scope:... is copied from the vanilla fp2
+	# effects above rather than using `target = this`, because that is the form
+	# vanilla actually ships for this exact job. The scope name is reused every
+	# iteration, which is fine and is also what vanilla does.
+	if = {
+		limit = { has_variable = $MARKER_VAR$ }
+		save_scope_as = sg_registry_obj
+		add_to_global_variable_list = {
+			name = $REGISTRY$
+			target = scope:sg_registry_obj
+		}
+	}
+}

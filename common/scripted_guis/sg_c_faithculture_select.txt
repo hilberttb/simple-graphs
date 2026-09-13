@@ -2,7 +2,7 @@
 # Simple Graphs - selection scripted GUIs
 #
 # Click handlers behind the faith/culture picker in
-# gui/simple_graphs/simple_graphs_window.gui. Each records ONE currently
+# gui/simple_graphs/sg_c_faithculture_window.gui. Each records ONE currently
 # selected object in a global variable, which the window's plot binds to.
 #
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@
 # complains; Execute just refuses, which is why the effects never logged.
 #
 # The window now says so on screen rather than looking broken - see the
-# Observer-mode warning in simple_graphs_window.gui. Everything else there works
+# Observer-mode warning in sg_c_faithculture_window.gui. Everything else there works
 # in Observer, because it is all pure reads.
 #
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@
 # `value = root` 22 times against exactly one `value = this`.
 #
 # Storing the SCOPE rather than a key is the decision documented at length in
-# stats_tracker_register_object_effect - runtime-created faiths and hybrid
+# sg_engine_register_object_effect - runtime-created faiths and hybrid
 # cultures have engine-generated keys, so anything key-based breaks exactly
 # where this needs to work.
 #
@@ -93,45 +93,45 @@
 # GUI only ever asks `.IsSet`, a plain bool on a global whose type it knows.
 ###############################################################################
 
-simple_graphs_select_faith_gui = {
+sg_c_faithculture_select_faith_gui = {
 	scope = none
 
 	effect = {
 		# Exactly one selection at a time. Clearing the other type is what makes
 		# the window's two plot instances mutually exclusive. Guarded rather
 		# than bare, matching the defensive style of the registry clears in
-		# stats_tracker_effects.txt: on the very first click one of these two
+		# sg_c_faithculture_collect.txt: on the very first click one of these two
 		# has definitely never existed.
 		if = {
-			limit = { has_global_variable = simple_graphs_selected_culture }
-			remove_global_variable = simple_graphs_selected_culture
+			limit = { has_global_variable = sg_selected_culture }
+			remove_global_variable = sg_selected_culture
 		}
 		set_global_variable = {
-			name = simple_graphs_selected_faith
+			name = sg_selected_faith
 			value = root
 		}
 
 		# DIAGNOSTIC. Answers "did the click reach script?". Search debug.log for
 		# SIMPLE_GRAPHS_CLICK. Root is the faith, so THIS is the faith and the
 		# loc key reuses exactly the [THIS.Faith.GetNameNoTooltip] form that
-		# stats_tracker_debug_faith already proves works.
-		debug_log = stats_tracker_debug_click_faith
+		# sg_c_fc_debug_faith already proves works.
+		debug_log = sg_c_fc_debug_click_faith
 	}
 }
 
-simple_graphs_select_culture_gui = {
+sg_c_faithculture_select_culture_gui = {
 	scope = none
 
 	effect = {
 		if = {
-			limit = { has_global_variable = simple_graphs_selected_faith }
-			remove_global_variable = simple_graphs_selected_faith
+			limit = { has_global_variable = sg_selected_faith }
+			remove_global_variable = sg_selected_faith
 		}
 		set_global_variable = {
-			name = simple_graphs_selected_culture
+			name = sg_selected_culture
 			value = root
 		}
 
-		debug_log = stats_tracker_debug_click_culture
+		debug_log = sg_c_fc_debug_click_culture
 	}
 }

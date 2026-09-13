@@ -1,12 +1,14 @@
-﻿namespace = stats_tracker
+﻿namespace = sg_engine
 
 ###############################################################################
-# stats_tracker.1 - the recurring county-count snapshot.
+# sg_engine.1 - the recurring snapshot. Fires the collection hook in
+#               common/scripted_effects/sg_wiring.txt, which is the only
+#               thing this file knows about any consumer.
 #
-# scope = none : this is world bookkeeping, it has no root character.
+# scope = none : this is world bookkeeping - there is no one it happens TO.
 #                (documented in game/events/_events.info)
 # hidden = yes : background event, no popup. _events.info also notes that
-#                non-character-scoped events generally need to be hidden.
+#                events with no personal scope generally need to be hidden.
 #
 # TIMING - why "years = 1" and not "days = 365":
 #   _events.info documents days/weeks/months/years as trigger_event delays, so
@@ -22,16 +24,16 @@
 #   1002.2.30, but those are data artifacts, not evidence of a leap calendar.
 ###############################################################################
 
-stats_tracker.1 = {
+sg_engine.1 = {
 	scope = none
 	hidden = yes
 
 	immediate = {
-		stats_tracker_snapshot_effect = yes
+		sg_snapshot_collect_effect = yes
 
 		# Re-arm for the same calendar day next year, indefinitely.
 		trigger_event = {
-			id = stats_tracker.1
+			id = sg_engine.1
 			years = 1
 		}
 	}

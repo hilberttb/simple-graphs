@@ -1,0 +1,185 @@
+﻿###############################################################################
+# Simple Graphs - THE ENGINE LAYER
+#
+# One effect: sg_engine_append_point_effect. It takes the CURRENT SCOPE,
+# whatever type it is, reads one number off it, and appends that number to two
+# per-object variable lists in the two encodings the renderer knows how to read.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+# Every name it touches arrives as a parameter. This file is the thing a second
+# consumer is supposed to be able to call without editing it - and rule 1 is
+# what keeps that true, since the one bug class it catches is a consumer's
+# constant quietly taking up residence in here. Y_SCALE was exactly that.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS IS SCOPE-AGNOSTIC RATHER THAN "HAPPENS TO WORK ON BOTH"
+# ---------------------------------------------------------------------------
+# The read-back side is a genuine Scope-level facility, not a coincidence of
+# two object types happening to have parallel APIs. In logs/data_types/ there
+# is exactly ONE GetList that reads a script variable list, and it is declared
+# on Scope:
+#
+#     Scope.GetList( Arg0 )      Function   data_types_script.txt:3429
+#
+# No object type declares its own GetList - not one. The only route to a stored
+# list is <Type>.MakeScope.GetList, and .MakeScope is declared on 57 distinct
+# object types. So anything with a .MakeScope can store and read back a series
+# through this effect, for free, with no new engine support and nothing to
+# verify per type. That is why the .MakeScope hop is not ceremony: it IS the
+# mechanism.
+#
+# The write side is likewise Scope-level: set_variable / change_variable /
+# add_to_variable_list are available on every scope type that "Stores
+# Variables: yes" in logs/event_scopes.log.
+#
+# ---------------------------------------------------------------------------
+# PARAMETERS
+# ---------------------------------------------------------------------------
+#   VALUE_VAR   name of the variable on THIS scope holding the metric for this
+#               snapshot. Read, never written.
+#   PLAIN_LIST  list to append the human-readable encoding to.
+#   PLAIN_VAR   scratch//display variable holding this snapshot's plain entry.
+#               Kept per-consumer because the GUI reads it directly for the
+#               "current value" column.
+#   SEG_LIST    list to append the packed line-segment encoding to.
+#   PREV_Y_VAR  variable remembering the previous snapshot's y. MUST be unique
+#               per consumer: it persists between invocations and is what makes
+#               a segment join the right two points.
+#   Y_SCALE     pixels per unit of the metric. THIS IS A PER-CONSUMER NUMBER,
+#               and the reason it is a parameter rather than a constant here.
+#               A metric running 0..~1000 wants 0.3 to span a 300px plot; one
+#               running 0..66 wants something far larger or the whole series
+#               sits squashed on the bottom edge. Picking it needs the range of
+#               the metric, which only the consumer knows.
+#               Pick it against the LARGEST value the metric can reach: if
+#               value * Y_SCALE exceeds Y_MAX, clamp_variable pins every such
+#               object to the same y and silently merges distinct series onto
+#               the top edge.
+#   Y_MAX       plot height in pixels. Must be <= 999 - see the packing below.
+#
+# Every one of these substitution shapes is vanilla-proven, which matters
+# because CK3 fails silently on a bad one:
+#   name  = $X$            00_achievement_effects.txt:22
+#   value = $X$ / add = $X$ 00_achievement_effects.txt:41 / :28
+#   multiply = $X$          00_casus_belli_effects.txt:51
+#   var:$X$                 00_debug_and_shortcut_effects.txt:9, :26, :32
+#
+# ---------------------------------------------------------------------------
+# THE TWO ENCODINGS (unchanged - this is a move, not a redesign)
+# ---------------------------------------------------------------------------
+# (A) PLAIN.   entry = value + snapshot_index * 0.0001
+#     add_to_variable_list DE-DUPLICATES BY VALUE, so a bare metric list
+#     silently collapses for any object whose value is stable. The 4th-decimal
+#     tag makes consecutive equal values distinct while FixedPointToInt() in
+#     the GUI truncates straight back to the metric. Hard limit 9999 snapshots,
+#     after which the tag reaches 1.0 and corrupts the integer part.
+#
+#     ORDERING - RESOLVED IN-GAME, 2026-09-13. It used to be an open question
+#     whether this list comes back in insertion order or sorted by value, which
+#     mattered because a value-sorted list would not be chronological whenever
+#     the metric went DOWN (400.0002 would sort before 443.0001).
+#     The answer is INSERTION ORDER. A number column in the window read
+#     594.0001, 594.0002, 594.0003, 594.0004, 592.0005 - the smallest value
+#     LAST, which a value-sorted list could not produce. So this list is
+#     chronological and can be read as such.
+#     Nothing actually depended on the answer, because (B) below was
+#     deliberately built to be immune either way; it just means the simpler
+#     plain list is safe to rely on too.
+#
+# (B) SEGMENT. y     = Y_MAX - clamp( round( value * Y_SCALE ), 0, Y_MAX )
+#              entry = snapshot_index * 1000000 + y_prev * 1000 + y_now
+#     y is already a pixel offset and already flipped for GUI coordinates.
+#     A `line` widget needs both endpoints but a datamodel item can only see
+#     itself, so the pair has to arrive in ONE value.
+#
+#     THE 1000 RADIX IS WHY Y_MAX MUST BE <= 999. y_now occupies the low
+#     three digits; a y of 1000 would carry into y_prev and silently corrupt
+#     the previous endpoint. Y_SCALE is clamped against Y_MAX above, so the
+#     only way to break this is to pass Y_MAX > 999.
+#
+#     snapshot_index as the high-order term does double duty: it makes every
+#     entry unique (dedup-proof even for a dead-flat series) and it makes the
+#     list monotonically increasing, so index order is chronological.
+#
+#     The first snapshot for an object produces NO segment - there is nothing
+#     to connect to yet. N snapshots give N-1 segments.
+#
+# ---------------------------------------------------------------------------
+# SHARED SCRATCH
+# ---------------------------------------------------------------------------
+# sg_y_scratch / sg_y_now / sg_seg_entry are
+# NOT parameterized. They are written and consumed inside a single invocation
+# on a single scope, so two consumers sharing the names cannot interfere even
+# if they ever track the same object.
+#
+# PREV_Y_VAR is the exact opposite and is a parameter for that reason: it
+# persists BETWEEN invocations, so two consumers sharing it would interleave
+# their line segments. Keep that asymmetry - it is load-bearing.
+###############################################################################
+
+sg_engine_append_point_effect = {
+
+	# --- (A) plain value, uniquified in the 4th decimal ---
+	set_variable = {
+		name = $PLAIN_VAR$
+		value = global_var:sg_snapshot_index
+	}
+	change_variable = { name = $PLAIN_VAR$ divide = 10000 }
+	change_variable = {
+		name = $PLAIN_VAR$
+		add = var:$VALUE_VAR$
+	}
+	add_to_variable_list = {
+		name = $PLAIN_LIST$
+		target = var:$PLAIN_VAR$
+	}
+
+	# --- (B) this snapshot's y, in plot pixels, already flipped ---
+	set_variable = {
+		name = sg_y_scratch
+		value = var:$VALUE_VAR$
+	}
+	change_variable = { name = sg_y_scratch multiply = $Y_SCALE$ }
+	round_variable = { name = sg_y_scratch nearest = 1 }
+	clamp_variable = { name = sg_y_scratch min = 0 max = $Y_MAX$ }
+
+	set_variable = { name = sg_y_now value = $Y_MAX$ }
+	change_variable = {
+		name = sg_y_now
+		subtract = var:sg_y_scratch
+	}
+
+	# --- (B) pack the segment, but only once there is a point to connect to ---
+	if = {
+		limit = { has_variable = $PREV_Y_VAR$ }
+
+		set_variable = {
+			name = sg_seg_entry
+			value = global_var:sg_snapshot_index
+		}
+		change_variable = { name = sg_seg_entry multiply = 1000000 }
+
+		set_variable = {
+			name = sg_y_scratch
+			value = var:$PREV_Y_VAR$
+		}
+		change_variable = { name = sg_y_scratch multiply = 1000 }
+		change_variable = {
+			name = sg_seg_entry
+			add = var:sg_y_scratch
+		}
+		change_variable = {
+			name = sg_seg_entry
+			add = var:sg_y_now
+		}
+
+		add_to_variable_list = {
+			name = $SEG_LIST$
+			target = var:sg_seg_entry
+		}
+	}
+
+	set_variable = { name = $PREV_Y_VAR$ value = var:sg_y_now }
+}

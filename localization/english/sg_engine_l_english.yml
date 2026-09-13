@@ -1,0 +1,24 @@
+﻿l_english:
+
+# Simple Graphs - ENGINE localisation.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+#
+# Only labels that describe the STORAGE AND THE PLOT belong here - a snapshot
+# count, a segment count, the packed-entry column headings. Anything naming
+# what is being measured belongs in that consumer's own loc file, which is why
+# "idx / stored value / counties" is next door and "idx / packed entry / y
+# start / y end" is here.
+#
+# No square brackets in any literal label: brackets are data-function syntax,
+# not text (README_DATA_COLLECTION.md gotcha 5).
+
+ sg_engine_debug_snapshot_date:0 "SIMPLE_GRAPHS snapshot on [GetCurrentDate.GetStringLong] (year [GetCurrentDate.GetYear])"
+
+ SG_ENGINE_CLOSE:0 "Close"
+ SG_ENGINE_LBL_SNAPSHOTS:0 "snapshots taken:"
+ SG_ENGINE_LBL_SEGCOUNT:0 "segments:"
+ SG_ENGINE_LBL_PLAINCOUNT:0 "plain points:"
+ SG_ENGINE_LBL_SEGCOLS:0 "idx / packed entry / y start / y end"

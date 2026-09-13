@@ -1,0 +1,43 @@
+﻿l_english:
+
+# Simple Graphs - CONSUMER localisation: the faith / culture county counter.
+#
+# Everything here names a faith, a culture or a county, which is exactly why it
+# is not in sg_engine_l_english.yml. The engine half holds only the labels that
+# describe the storage and the plot.
+#
+# No square brackets in any of the literal labels below: brackets are
+# data-function syntax, not text (README_DATA_COLLECTION.md gotcha 5).
+#
+# The debug_log marker strings (SIMPLE_GRAPHS, SIMPLE_GRAPHS_CLICK,
+# SIMPLE_GRAPHS_REGISTRY) are deliberately UNCHANGED by the sg_ rename, so that
+# verify_snapshot_totals.py and every saved dump in this repo keep parsing.
+
+# ---- debug ------------------------------------------------------------------
+ sg_c_fc_debug_faith:0 "SIMPLE_GRAPHS FAITH [THIS.Faith.GetNameNoTooltip] counties=[THIS.Var('sg_faithculture_running_count').GetValue] enc=[THIS.Var('sg_faithculture_encoded').GetValue]"
+ sg_c_fc_debug_culture:0 "SIMPLE_GRAPHS CULTURE [THIS.Culture.GetNameNoTooltip] counties=[THIS.Var('sg_faithculture_running_count').GetValue] enc=[THIS.Var('sg_faithculture_encoded').GetValue]"
+ sg_c_fc_debug_click_faith:0 "SIMPLE_GRAPHS_CLICK faith [THIS.Faith.GetNameNoTooltip] selected"
+ sg_c_fc_debug_click_culture:0 "SIMPLE_GRAPHS_CLICK culture [THIS.Culture.GetNameNoTooltip] selected"
+ sg_c_fc_debug_registry:0 "SIMPLE_GRAPHS_REGISTRY faiths=[GetGlobalVariable('sg_faith_registry_count').GetValue] cultures=[GetGlobalVariable('sg_culture_registry_count').GetValue]"
+
+# ---- window chrome ----------------------------------------------------------
+ SG_C_FC_OPEN_BUTTON:0 "County graph"
+ SG_C_FC_WINDOW_TITLE:0 "Simple Graphs - county count over time"
+ SG_C_FC_LBL_PLAINCOLS:0 "idx / stored value / counties"
+
+# ---- the picker -------------------------------------------------------------
+# No faith or culture is named anywhere in the picker - it is driven entirely by
+# the sg_faith_registry / sg_culture_registry registries.
+ SG_C_FC_LBL_PICKER:0 "PICK ONE - click any row to plot it"
+ SG_C_FC_LBL_FAITHCOUNT:0 "faiths:"
+ SG_C_FC_LBL_CULTCOUNT:0 "cultures:"
+ SG_C_FC_LBL_FAITHCOLS:0 "FAITHS - click a row. name / counties / pts / seg"
+ SG_C_FC_LBL_CULTCOLS:0 "CULTURES - click a row. name / counties / pts / seg"
+
+# ---- the plot ---------------------------------------------------------------
+# Bound to whichever faith or culture was last clicked in the picker.
+ SG_C_FC_LBL_SELECTED:0 "SHOWING:"
+ SG_C_FC_LBL_NOSEL:0 "nothing selected yet - click a faith or a culture in the list on the right"
+ SG_C_FC_LBL_SELPLOT:0 "Counties over time - oldest snapshot at the left, higher means more counties."
+ SG_C_FC_TT_CLICK:0 "Click to plot this one."
+ SG_C_FC_LBL_OBSERVER:0 "OBSERVER MODE - selection is unavailable without a player character. Everything else on this window still works."
