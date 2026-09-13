@@ -1,0 +1,137 @@
+﻿###############################################################################
+# Simple Graphs - selection scripted GUIs
+#
+# Click handlers behind the faith/culture picker in
+# gui/simple_graphs/simple_graphs_window.gui. Each records ONE currently
+# selected object in a global variable, which the window's plot binds to.
+#
+# ---------------------------------------------------------------------------
+# THE ROUTE FROM A CLICK INTO SCRIPT
+# ---------------------------------------------------------------------------
+# A .gui file cannot run an effect by itself. The only route is
+# GetScriptedGui('name').Execute( <a GuiScope> ). Signatures confirmed against
+# logs/data_types/:
+#   GetScriptedGui( Arg0 )    Global promote -> ScriptedGui   data_types_gui.txt:1
+#   GuiScope                  Global promote -> TopScope      data_types_gui.txt:15
+#   TopScope.SetRoot( Arg0 )  Promote        -> TopScope      data_types_script.txt:3922
+#   TopScope.AddScope( A, B ) Promote        -> TopScope      data_types_script.txt:3904
+#   TopScope.End              Function       -> TopScope      data_types_script.txt:4054
+#   ScriptedGui.Execute( A0 ) Function       -> void          data_types_script.txt:3731
+#
+# ---------------------------------------------------------------------------
+# THE BUG THAT COST THREE ROUNDS: OBSERVER MODE
+# ---------------------------------------------------------------------------
+# READ THIS BEFORE DEBUGGING A CLICK THAT DOES NOTHING.
+#
+# A scripted GUI's Execute DOES NOT RUN AT ALL WHEN THERE IS NO PLAYER
+# CHARACTER. In Observer mode every onclick into script is silently inert - no
+# effect, no debug_log, nothing in error.log, nothing in gui_warnings.log.
+#
+# Confirmed 2026-09-13 by clicking four deliberately different routes into
+# script and getting zero output from every one of them:
+#     A  scope = character, root = GetPlayer, object via AddScope
+#     B  scope = faith,     root = the faith        (no GetPlayer anywhere)
+#     C  scope = none,      root = the faith        (no GetPlayer anywhere)
+#     D  scope = none,      root = GetPlayer, object hardcoded in the effect
+# The instant a character was selected and the same save reloaded, ALL FOUR
+# fired and every faith and culture became selectable.
+#
+# So this is not a scoping problem and not something the mod can route around -
+# B and C never touch GetPlayer and failed anyway. It is an engine-level
+# property of scripted GUIs: they model a player action, and with no player
+# there is nothing to attribute the action to.
+#
+# The one clue that did point here, in hindsight: an earlier version put a
+# `down = "[...IsShown( ... )]"` on every row, and in Observer that logged
+#
+#     Error: untyped trigger [ Scoped object of type 'character' is not valid
+#                              ((no character) weak (Character - 4294967295)!) ]
+#
+# 4294967295 is 0xFFFFFFFF. That really was "there is no player character" - it
+# was read at the time as "GetPlayer does not resolve in this window", which was
+# the wrong conclusion from the right evidence. IsShown evaluates a trigger and
+# complains; Execute just refuses, which is why the effects never logged.
+#
+# The window now says so on screen rather than looking broken - see the
+# Observer-mode warning in simple_graphs_window.gui. Everything else there works
+# in Observer, because it is all pure reads.
+#
+# ---------------------------------------------------------------------------
+# WHAT THE FOUR-WAY TEST ALSO SETTLED
+# ---------------------------------------------------------------------------
+# Once a player existed, all four routes worked. So with a player character:
+#   - GetPlayer is fine in this window (A and D).
+#   - A typed non-character scope is accepted: `scope = faith` works (B).
+#   - `scope = none` accepts a non-character root and `value = root` reads it
+#     back correctly (C) - `none` means "no type requirement on root", not
+#     "root must be nothing".
+# Any of them would do. The effects below use the C shape: it needs no player,
+# no saved scope and no type assertion, so it is the one that survives the most
+# future change. `none` is also the better-proven keyword - mod 2506311074 ships
+# `scope = none` (oe_sgui.txt:2) while nothing in vanilla or in any of the 28
+# installed workshop mods declares `faith` or `culture`.
+#
+# `value = root` rather than `value = this`: same object here, but vanilla uses
+# `value = root` 22 times against exactly one `value = this`.
+#
+# Storing the SCOPE rather than a key is the decision documented at length in
+# stats_tracker_register_object_effect - runtime-created faiths and hybrid
+# cultures have engine-generated keys, so anything key-based breaks exactly
+# where this needs to work.
+#
+# ---------------------------------------------------------------------------
+# WHY TWO GLOBALS INSTEAD OF ONE PLUS A TYPE FLAG
+# ---------------------------------------------------------------------------
+# The selection is either a Faith or a Culture and the plot binds to one
+# datamodel. A single generic global would make the GUI call Scope.Faith on
+# something that might be a Culture and hope it returns invalid rather than
+# erroring. Not confirmable: `Scope.<Type>.IsValid` appears ZERO times across
+# game/gui, jomini/gui, clausewitz/gui and all 28 installed workshop mods.
+#
+# So the type is carried structurally: two globals, each only ever written with
+# one type, exactly one set at a time - each effect clears the other first. The
+# GUI only ever asks `.IsSet`, a plain bool on a global whose type it knows.
+###############################################################################
+
+simple_graphs_select_faith_gui = {
+	scope = none
+
+	effect = {
+		# Exactly one selection at a time. Clearing the other type is what makes
+		# the window's two plot instances mutually exclusive. Guarded rather
+		# than bare, matching the defensive style of the registry clears in
+		# stats_tracker_effects.txt: on the very first click one of these two
+		# has definitely never existed.
+		if = {
+			limit = { has_global_variable = simple_graphs_selected_culture }
+			remove_global_variable = simple_graphs_selected_culture
+		}
+		set_global_variable = {
+			name = simple_graphs_selected_faith
+			value = root
+		}
+
+		# DIAGNOSTIC. Answers "did the click reach script?". Search debug.log for
+		# SIMPLE_GRAPHS_CLICK. Root is the faith, so THIS is the faith and the
+		# loc key reuses exactly the [THIS.Faith.GetNameNoTooltip] form that
+		# stats_tracker_debug_faith already proves works.
+		debug_log = stats_tracker_debug_click_faith
+	}
+}
+
+simple_graphs_select_culture_gui = {
+	scope = none
+
+	effect = {
+		if = {
+			limit = { has_global_variable = simple_graphs_selected_faith }
+			remove_global_variable = simple_graphs_selected_faith
+		}
+		set_global_variable = {
+			name = simple_graphs_selected_culture
+			value = root
+		}
+
+		debug_log = stats_tracker_debug_click_culture
+	}
+}

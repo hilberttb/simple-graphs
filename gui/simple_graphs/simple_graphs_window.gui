@@ -1,44 +1,18 @@
 ﻿###############################################################################
-# Simple Graphs - connected line graph prototype (catholic county count).
+# Simple Graphs - connected line graph, driven by a faith/culture picker.
 #
-# Deliberately ugly. No axes, no scale markers, no legend, no styling beyond
-# what is needed to see the line. Its whole job is to prove that a genuine
-# multi-point connected line, built from real script data, draws on screen and
-# grows by one segment per snapshot.
+# Two columns:
+#   x  20 ..  640   the plot. Shows whichever faith or culture is selected.
+#   x 660 .. 1090   the picker. Every row is a click target.
 #
-# ---------------------------------------------------------------------------
-# THE DIAGNOSTIC LADDER - read this if it does not work
-# ---------------------------------------------------------------------------
-# Several unproven mechanisms land here at once, so the window is built as a
-# ladder of independent rungs. Whichever rung is the last one you can see tells
-# you exactly which mechanism failed:
+# There is exactly ONE plot. Comparing two series side by side is deliberately
+# not a feature - the window briefly showed two during the migration off the
+# catholic hardcode, and that scaffolding is gone.
 #
-#   Rung 1  "REF A"   a `line` with literal from/to.
-#                     Visible => the line widget renders in this window at all.
-#                     This is vanilla-proven syntax (window_dynasty_tree.gui:79).
-#
-#   Rung 2  "REF B"   a `line` whose from/to come from FloatToCVector2f() with
-#                     literal floats.
-#                     Visible => FloatToCVector2f is accepted as a from/to
-#                     binding. NOTHING in vanilla or in any installed mod does
-#                     this - the function is confirmed to exist in
-#                     logs/data_types/data_types_common.txt:321 but its use on
-#                     a line endpoint is unproven. This rung is the single
-#                     riskiest assumption in the whole prototype.
-#
-#   Rung 3  "REF C"   same, but the coordinates are produced by the same
-#                     int32 -> float chain the real graph uses
-#                     (Modulo_int32 / Divide_int32 / IntToFloat), on constants.
-#                     Visible => the arithmetic chain is sound.
-#
-#   Rung 4            the actual data-driven series.
-#                     Visible => everything works.
-#
-#   Numbers panel     prints the raw list contents and the decoded endpoints.
-#                     If rungs 1-3 draw but rung 4 does not, and the numbers
-#                     panel is empty, the problem is the DATA (no global list).
-#                     If the numbers panel shows sensible values but no line
-#                     draws, the problem is the COORDINATE BINDING.
+# Selection REQUIRES A PLAYED CHARACTER. A scripted GUI's Execute does not run
+# at all in Observer mode, so the rows are inert there; the window says so on
+# screen. Everything else here is a pure read and works in Observer. Full
+# reasoning in common/scripted_guis/simple_graphs_scripted_guis.txt.
 #
 # ---------------------------------------------------------------------------
 # COORDINATES
@@ -94,26 +68,17 @@ template SimpleGraphsLineData
 	mask_uv_scale = { 1.0 1.0 }
 }
 
-template SimpleGraphsLineRef
-{
-	width = 2
-	line_cap = yes
-	color = { 0.55 0.55 0.55 1.0 }
-	texture = "gfx/lines/white.dds"
-	uv_scale = { 1.0 1.0 }
-	mask = "gfx/lines/white.dds"
-	mask_uv_scale = { 1.0 1.0 }
-}
-
 window = {
 	name = "simple_graphs_window"
 	datacontext = "[GetVariableSystem]"
 
 	parentanchor = center
-	# Widened from 680x620 to fit a second column. Every widget in the original
-	# column is absolutely positioned, so none of them move; the close button is
-	# parentanchor = top|right and follows the new edge on its own.
-	size = { 1180 700 }
+	# 680x620 -> 1180x700 -> 1750x700 while two plots were on screen for the
+	# catholic migration -> 1090x700 now that only the selection plot remains.
+	# The plot keeps its 600x300 size: the 300px height is fixed by the script's
+	# 0-300 y scale and must not change without changing
+	# stats_tracker_plain_and_segment_effect to match.
+	size = { 1090 700 }
 	layer = windows_layer
 	movable = yes
 
@@ -143,60 +108,127 @@ window = {
 		onclick = "[GetVariableSystem.Toggle( 'simple_graphs_window_open' )]"
 	}
 
-	### rungs 1-3: line widget sanity strip ####################################
+	### THE PLOT ################################################################
+	# Names no faith and no culture anywhere. Plots whatever was last clicked in
+	# the picker on the right.
+	#
+	# The 600x300 size is not arbitrary: the 300px height is fixed by the 0-300
+	# pixel y scale that stats_tracker_plain_and_segment_effect encodes into
+	# every packed segment, and must not change without changing that effect.
+	#
+	# -------------------------------------------------------------------------
+	# HOW A SELECTION GETS HERE
+	# -------------------------------------------------------------------------
+	# Clicking a row runs common/scripted_guis/simple_graphs_scripted_guis.txt,
+	# which writes the clicked object's SCOPE into a global variable. The chain
+	# back out, every link confirmed in logs/data_types/:
+	#
+	#   GetGlobalVariable( 'name' )  Global promote -> Scope  script.txt:364
+	#     .Faith / .Culture          Promote -> Faith/Culture script.txt:2923 / :2853
+	#       .MakeScope               Promote -> Scope         uncategorized.txt:61019 / :49608
+	#         .GetList( 'name' )     Function -> datamodel    script.txt:3429
+	#
+	# Only the FIRST link is new. The other three are exactly what the picker
+	# column on the right already does per row, and they were verified in-game on
+	# 2026-09-13 (real names, pts = snapshots taken, seg = pts - 1). The first
+	# link is the same shape as the already-working
+	# GetGlobalVariable( 'stats_tracker_snapshot_index' ).GetValue in the counter
+	# row of the left column.
+	#
+	# -------------------------------------------------------------------------
+	# WHY EVERYTHING BELOW EXISTS TWICE
+	# -------------------------------------------------------------------------
+	# A selection is either a Faith or a Culture, and `line` needs one datamodel.
+	# The alternative design - one generic global plus a type flag, letting the
+	# GUI ask whether .Faith "works" on it - was rejected because a mistyped
+	# promote's behaviour is not confirmable: `Scope.<Type>.IsValid` appears
+	# ZERO times across game/gui, jomini/gui, clausewitz/gui and all 28 installed
+	# workshop mods. Nothing in shipped code ever calls a Scope type-promote
+	# where the type might be wrong, so there is no evidence it degrades quietly
+	# rather than erroring or spamming.
+	#
+	# So the type is carried structurally instead: two globals, only one ever set
+	# at a time, each only ever holding its own type. Each pair of widgets below
+	# is guarded by `.IsSet` on its own global, which is a plain bool
+	# (Scope.IsSet, data_types_script.txt:3550) on a type the widget already
+	# knows. The two are mutually exclusive by construction, so exactly one plot
+	# is ever on screen - the "one graph at a time" scope limit is enforced by
+	# the data model rather than by a rule someone has to remember.
+	#
+	# The cost is that the faith block and the culture block below are textually
+	# near-identical. That is the accepted trade.
+	#
+	# -------------------------------------------------------------------------
+	# THE LINE EXPRESSIONS ARE UNCHANGED FROM THE PROTOTYPE
+	# -------------------------------------------------------------------------
+	# The `from`/`to` expressions below are character-for-character what the
+	# original catholic-hardcoded plot used; only the datamodel source differs.
+	# That equality was the whole basis of the migration check: on 2026-09-13,
+	# selecting Catholic here reproduced the hardcoded plot segment for segment,
+	# and every number column matched value for value, which is what licensed
+	# deleting the hardcode.
+	#
+	# The faith and culture blocks below are near-identical rather than sharing a
+	# template. See "WHY EVERYTHING BELOW EXISTS TWICE" above - they bind
+	# different datamodels and only one is ever visible.
 	text_single = {
 		position = { 20 46 }
-		text = "SIMPLE_GRAPHS_LBL_REFS"
+		text = "SIMPLE_GRAPHS_LBL_SELECTED"
 	}
 
 	widget = {
-		name = "simple_graphs_ref_strip"
-		position = { 40 68 }
-		size = { 600 40 }
-		allow_outside = yes
+		name = "simple_graphs_selected_name"
+		position = { 120 46 }
+		size = { 520 20 }
 
-		background = {
-			texture = "gfx/interface/colors/black.dds"
-			alpha = 0.45
+		text_single = {
+			position = { 0 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+			text = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.GetNameNoTooltip]"
 		}
-
-		# RUNG 1 - literal from/to. Vanilla-proven (window_dynasty_tree.gui:79).
-		line = {
-			using = SimpleGraphsLineRef
-			from = { 0 38 }
-			to = { 180 2 }
+		text_single = {
+			position = { 0 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+			text = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.GetNameNoTooltip]"
 		}
-
-		# RUNG 2 - FloatToCVector2f with literal floats. Unproven anywhere.
-		line = {
-			using = SimpleGraphsLineRef
-			from = "[FloatToCVector2f( '(float)200', '(float)38' )]"
-			to = "[FloatToCVector2f( '(float)380', '(float)2' )]"
-		}
-
-		# RUNG 3 - same, coordinates built through the int32 -> float chain the
-		# real series uses. Modulo_int32( 1420, 1000 ) = 420,
-		# Divide_int32( 600000, 1000 ) = 600.
-		line = {
-			using = SimpleGraphsLineRef
-			from = "[FloatToCVector2f( IntToFloat( Modulo_int32( '(int32)1420', '(int32)1000' ) ), '(float)38' )]"
-			to = "[FloatToCVector2f( IntToFloat( Divide_int32( '(int32)600000', '(int32)1000' ) ), '(float)2' )]"
+		# Neither set - i.e. nothing has been clicked yet in this campaign. There
+		# is deliberately no default selection: seeding one would mean naming a
+		# faith in script, which is the hardcode this column exists to remove.
+		text_single = {
+			position = { 0 0 }
+			visible = "[And( Not( GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet ), Not( GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet ) )]"
+			text = "SIMPLE_GRAPHS_LBL_NOSEL"
 		}
 	}
 
-	### rung 4: the actual graph ###############################################
-	# NOTE: a horizontal scrollbox was tried here on 2026-09-12 to stop the line
-	# running past the window once the series passes ~20 segments. It did not
-	# work - no scrollbar appeared and nothing was clipped - and was reverted.
-	# Do not retry it in that shape. Details in the project memory,
-	# ck3-scrollbox-does-not-contain-line-widgets.
+	### Observer-mode warning ##################################################
+	# Selection genuinely does not work without a player character. In Observer
+	# mode a scripted GUI's Execute does not run AT ALL - confirmed 2026-09-13 by
+	# clicking four different routes into script, including two that never touch
+	# GetPlayer, and getting zero debug output from any of them; the moment a
+	# character was selected, all four fired. So this is not something the mod can
+	# route around, and the honest thing is to say so rather than let the picker
+	# look broken. See the header of simple_graphs_scripted_guis.txt.
+	#
+	# Everything else in this window still works in Observer - the picker lists,
+	# the counts and all the number columns are pure reads. Only clicking is
+	# blocked, so a plot selected before entering Observer keeps rendering.
+	# GetPlayer.IsValid as an availability test is the vanilla-style guard and is
+	# what workshop mod 3118461885 uses on its own floating button
+	# (HRT_floating_button.gui:5).
+	text_single = {
+		position = { 20 76 }
+		visible = "[Not( GetPlayer.IsValid )]"
+		text = "SIMPLE_GRAPHS_LBL_OBSERVER"
+	}
+
 	text_single = {
 		position = { 20 116 }
-		text = "SIMPLE_GRAPHS_LBL_PLOT"
+		text = "SIMPLE_GRAPHS_LBL_SELPLOT"
 	}
 
 	widget = {
-		name = "simple_graphs_plot_area"
+		name = "simple_graphs_sel_plot_area"
 		position = { 40 138 }
 		size = { 600 300 }
 		allow_outside = yes
@@ -206,17 +238,36 @@ window = {
 			alpha = 0.45
 		}
 
-		# One `line` per consecutive pair of snapshots, oldest to newest.
-		# Structure copied from the vanilla perk-tree connector block
-		# (window_character_lifestyle.gui:978-1010): a plain widget carrying the
-		# datamodel, one container per item, the line inside it. Items all sit at
-		# the container origin and place themselves purely via from/to.
+		# --- selection is a FAITH --------------------------------------------
 		widget = {
-			name = "simple_graphs_series"
+			name = "simple_graphs_sel_series_faith"
 			size = { 100% 100% }
 			allow_outside = yes
 
-			datamodel = "[GetGlobalList( 'simple_graphs_catholic_segments' )]"
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+			datamodel = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.MakeScope.GetList( 'stats_tracker_county_segments' )]"
+
+			item = {
+				container = {
+					allow_outside = yes
+
+					line = {
+						using = SimpleGraphsLineData
+						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), '(float)30' ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
+						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), '(float)30' ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
+					}
+				}
+			}
+		}
+
+		# --- selection is a CULTURE ------------------------------------------
+		widget = {
+			name = "simple_graphs_sel_series_culture"
+			size = { 100% 100% }
+			allow_outside = yes
+
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+			datamodel = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.MakeScope.GetList( 'stats_tracker_county_segments' )]"
 
 			item = {
 				container = {
@@ -232,76 +283,77 @@ window = {
 		}
 	}
 
-	### numbers panel ##########################################################
-	# Exists so that a failure is diagnosable without guessing. If these read
-	# correctly the data pipeline is fine and any problem is in the coordinates.
+	### the number columns ######################################################
+	# idx / packed entry / y start / y end, and idx / stored value / counties,
+	# both bound to the current selection and decoded with the same expressions
+	# the line itself uses.
 	#
-	# LAYOUT NOTE - why every row here is a fixed-size widget with absolutely
-	# positioned children instead of an hbox.
-	#
-	# The first version used nested vbox/hbox with minimumsize on each cell.
-	# hbox and vbox expand to their parent's width and then CENTRE their content
-	# block inside it, so the declared x positions were not honoured: the left
-	# column, declared at x 40, rendered at about x 256, and the right column,
-	# declared at x 400, rendered at about x 649 - which pushed its last two
-	# cells to x 689 and x 809, at and past the window's own right edge. Row
-	# pitch went the same way: minimumsize said 16, measured pitch was about 61,
-	# so only 2.4 rows fitted where the doc estimated 9.
-	#
-	# A plain `widget` with an explicit size and `position` on each child has no
-	# layout engine involved at all, so the columns land exactly where they are
-	# declared. The outer vbox is still used, but only to stack rows vertically,
-	# which it already did correctly.
-	#
-	# The two lists are now stacked one above the other rather than side by
-	# side, so nothing here depends on horizontal screen space, and the whole
-	# block sits in a scrollbox so rows past the bottom are reachable instead of
-	# silently clipped. Scrollbox pattern copied from window_struggle.gui:883-897
-	# (scrollbox + blockoverride "scrollbox_content" + a datamodel vbox).
-
+	# These are what make the selector verifiable rather than merely plausible:
+	# if clicking a different row changes these numbers, the binding really did
+	# move, and a line that happens to look similar cannot be mistaken for a line
+	# that never changed. They are also how the catholic migration was checked.
+	# Cheap to keep, and the first thing to read if a plot ever looks wrong.
 	widget = {
-		name = "simple_graphs_counters"
+		name = "simple_graphs_sel_counters"
 		position = { 40 446 }
 		size = { 600 20 }
 
 		text_single = {
 			position = { 0 0 }
-			text = "SIMPLE_GRAPHS_LBL_SNAPSHOTS"
-		}
-		text_single = {
-			position = { 130 0 }
-			visible = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).IsSet]"
-			text = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).GetValue]"
-		}
-		text_single = {
-			position = { 190 0 }
 			text = "SIMPLE_GRAPHS_LBL_SEGCOUNT"
 		}
 		text_single = {
-			position = { 270 0 }
-			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_catholic_segments' ) )]"
+			position = { 80 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
 		}
 		text_single = {
-			position = { 330 0 }
+			position = { 80 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+		}
+
+		text_single = {
+			position = { 150 0 }
 			text = "SIMPLE_GRAPHS_LBL_PLAINCOUNT"
 		}
 		text_single = {
-			position = { 430 0 }
-			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_catholic_plain' ) )]"
+			position = { 250 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+		}
+		text_single = {
+			position = { 250 0 }
+			visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+		}
+
+		# Kept from the deleted catholic column because it is not
+		# catholic-specific and it is the reference the two counts above are
+		# checked against: an object tracked since game start should show
+		# "plain points" equal to this, and "segments" one less.
+		text_single = {
+			position = { 330 0 }
+			text = "SIMPLE_GRAPHS_LBL_SNAPSHOTS"
+		}
+		text_single = {
+			position = { 460 0 }
+			visible = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).IsSet]"
+			text = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).GetValue]"
 		}
 	}
 
 	scrollbox = {
-		name = "simple_graphs_numbers_scroll"
+		name = "simple_graphs_sel_numbers_scroll"
 		position = { 40 472 }
 		size = { 600 136 }
 
 		blockoverride "scrollbox_content"
 		{
 			vbox = {
-				name = "simple_graphs_numbers_stack"
+				name = "simple_graphs_sel_numbers_stack"
 
-				# --- segment list -------------------------------------------
+				# --- segments, decoded exactly as the line decodes them -------
 				widget = {
 					size = { 540 20 }
 					text_single = {
@@ -311,8 +363,9 @@ window = {
 				}
 
 				vbox = {
-					name = "simple_graphs_segment_rows"
-					datamodel = "[GetGlobalList( 'simple_graphs_catholic_segments' )]"
+					name = "simple_graphs_sel_segment_rows_faith"
+					visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.MakeScope.GetList( 'stats_tracker_county_segments' )]"
 
 					item = {
 						widget = {
@@ -338,11 +391,36 @@ window = {
 					}
 				}
 
-				# --- plain list, stacked BELOW the segment list --------------
-				# Printed in datamodel index order on purpose: this is still the
-				# cheap experiment for whether CK3 stores variable lists by
-				# insertion or sorted by value. If catholic's count ever drops
-				# and these stay chronological, they are insertion-ordered.
+				vbox = {
+					name = "simple_graphs_sel_segment_rows_culture"
+					visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.MakeScope.GetList( 'stats_tracker_county_segments' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
+							}
+							text_single = {
+								position = { 260 0 }
+								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
+							}
+						}
+					}
+				}
+
+				# --- plain points --------------------------------------------
 				widget = {
 					size = { 540 20 }
 					text_single = {
@@ -352,8 +430,34 @@ window = {
 				}
 
 				vbox = {
-					name = "simple_graphs_plain_rows"
-					datamodel = "[GetGlobalList( 'simple_graphs_catholic_plain' )]"
+					name = "simple_graphs_sel_plain_rows_faith"
+					visible = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'simple_graphs_selected_faith' ).Faith.MakeScope.GetList( 'stats_tracker_county_history_plain' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[FixedPointToInt( Scope.GetValue )]"
+							}
+						}
+					}
+				}
+
+				vbox = {
+					name = "simple_graphs_sel_plain_rows_culture"
+					visible = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'simple_graphs_selected_culture' ).Culture.MakeScope.GetList( 'stats_tracker_county_history_plain' )]"
 
 					item = {
 						widget = {
@@ -378,44 +482,45 @@ window = {
 		}
 	}
 
-	### RIGHT COLUMN - the generic path #########################################
-	# Everything left of x=700 is the original catholic-hardcoded prototype and is
-	# untouched. Everything here reaches the SAME data without naming any faith or
-	# culture, and the two columns are side by side on purpose so they can be read
-	# against each other.
+	### THE PICKER ##############################################################
+	# Every faith and every culture that has ever held a county, read straight
+	# out of the two registries that stats_tracker_register_object_effect
+	# rebuilds each snapshot. No faith or culture is named anywhere here, and
+	# nothing needs special-casing for objects created mid-campaign - a reformed
+	# faith or a hybrid culture appears on its next snapshot because the registry
+	# is rebuilt rather than appended to.
 	#
-	# This is also a diagnostic ladder, in the same spirit as the reference strip
-	# at the top. Read it top-down; the first rung that is wrong is the broken one:
+	# Every row is a click target; clicking one drives the plot on the left.
+	# Selection needs a played character - see the Observer-mode note above.
 	#
-	#   Rung A  "faiths:" / "cultures:" counts are non-zero
-	#           => script wrote the registries. GetGlobalList reaches them.
-	#              Zero here means the script side never ran - check that a
-	#              snapshot has happened at all ("snapshots taken" on the left).
+	# The three mechanisms this column rests on, all verified in-game 2026-09-13:
 	#
-	#   Rung B  rows have NAMES in them
-	#           => datacontext = "[Scope.Faith]" promotes a stored scope back to
-	#              a real Faith. This is the single load-bearing assumption of the
-	#              whole approach. Blank names with a correct count in rung A
-	#              means the promote failed and nothing else here will work.
+	#   the counts      GetGlobalList reaches the registries.
 	#
-	#   Rung C  the "pts" and "seg" columns are non-zero
-	#           => Faith.MakeScope.GetList('name') reads that object's OWN
-	#              per-object list. This is what makes the global catholic mirror
-	#              unnecessary. "pts" should equal "snapshots taken" on the left
-	#              for any faith tracked since the start, and "seg" should be one
-	#              less (N snapshots produce N-1 segments).
+	#   the names       datacontext = "[Scope.Faith]" promotes a stored scope
+	#                   back to a real Faith. This is the load-bearing assumption
+	#                   of the whole design; blank names with non-zero counts
+	#                   would mean it had failed.
 	#
-	#   Rung D  the cross-check panel below matches the left column exactly
-	#           => the generic path and the hardcoded path agree on real data.
+	#   pts / seg       Faith.MakeScope.GetList('name') reads that object's OWN
+	#                   per-object list, which is what makes a global mirror
+	#                   unnecessary. "pts" equals "snapshots taken" for any
+	#                   object tracked since game start, and "seg" is one less
+	#                   (N snapshots produce N-1 segments).
+	#
+	# Row order is registry insertion order and is deliberately left alone:
+	# faiths come out grouped by religion (every_religion_global -> every_faith),
+	# cultures in a flat sweep. It is stable between snapshots. CK3 datamodels
+	# have no sort, so any other ordering would have to be produced script-side.
 	text_single = {
-		position = { 700 14 }
-		text = "SIMPLE_GRAPHS_LBL_GENERIC"
+		position = { 660 14 }
+		text = "SIMPLE_GRAPHS_LBL_PICKER"
 	}
 
 	widget = {
 		name = "simple_graphs_generic_counters"
-		position = { 700 46 }
-		size = { 460 20 }
+		position = { 660 46 }
+		size = { 430 20 }
 
 		# RUNG A
 		text_single = {
@@ -438,8 +543,8 @@ window = {
 
 	scrollbox = {
 		name = "simple_graphs_generic_scroll"
-		position = { 700 72 }
-		size = { 460 314 }
+		position = { 660 72 }
+		size = { 430 604 }
 
 		blockoverride "scrollbox_content"
 		{
@@ -460,34 +565,71 @@ window = {
 					datamodel = "[GetGlobalList( 'simple_graphs_all_faiths' )]"
 
 					item = {
-						widget = {
-							size = { 420 20 }
-
-							# RUNG B. The stored entry is a Scope; this promotes
-							# it back to the Faith it points at.
-							# (data_types_script.txt:2923)
+						# THE BUTTON IS THE ITEM'S ROOT AND CARRIES THE DATACONTEXT.
+						# An earlier version made this a plain `widget` holding the
+						# datacontext, with a bare `button` nested inside it under the
+						# text. That parsed clean - gui_warnings.log stayed empty and
+						# error.log showed nothing - and did absolutely nothing on click.
+						# Every working example of a clickable datamodel row puts the
+						# button at the top of the item and the datacontext on it:
+						#   workshop 3192256710,
+						#   ATE_character_selection_two_options.gui:25-32
+						#   vanilla window_activity_planner.gui:275-320
+						# so this now matches that shape exactly.
+						#
+						# button_standard rather than a bare `button` for the same reason:
+						# it is what both of those working examples use, and it brings
+						# hover and pressed states for free, so a row visibly reacts to
+						# the mouse. That reaction is itself the first diagnostic - if a
+						# row does not light up on hover, the click is not reaching the
+						# widget at all and nothing downstream matters.
+						button_standard = {
+							size = { 420 26 }
 							datacontext = "[Scope.Faith]"
 
-							text_single = {
-								position = { 0 0 }
-								text = "[Faith.GetNameNoTooltip]"
-							}
-							# current county count, read off the faith's own
-							# variable rather than any global mirror.
-							# Scope.GetVariable at data_types_script.txt:2972.
-							text_single = {
-								position = { 200 0 }
-								visible = "[Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
-								text = "[FixedPointToInt( Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
-							}
-							# RUNG C - per-object lists, read generically.
-							text_single = {
-								position = { 280 0 }
-								text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
-							}
-							text_single = {
-								position = { 350 0 }
-								text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+							onclick = "[GetScriptedGui( 'simple_graphs_select_faith_gui' ).Execute( GuiScope.SetRoot( Faith.MakeScope ).End )]"
+
+							# NO `down =` HERE ON PURPOSE. A previous version lit the
+							# selected row via a query-only scripted GUI's IsShown. It was
+							# evaluated once per row per frame and produced 97,758 script
+							# errors in six seconds - which is how the null-character root
+							# was finally found, so it did its job - but it is not worth
+							# re-adding until the selection itself is working. The
+							# "SHOWING:" line above the plot already names the selection.
+
+							tooltip = "SIMPLE_GRAPHS_TT_CLICK"
+
+							# The columns keep the exact fixed-size / absolutely-positioned
+							# layout that was arrived at the hard way (hbox and vbox ignore
+							# declared x positions - see README_LINE_GRAPH_PROTOTYPE.md,
+							# "Layout corrections"). They just live inside the button now.
+							# alwaystransparent on the wrapper keeps the whole text block
+							# from swallowing the click.
+							widget = {
+								size = { 100% 100% }
+								alwaystransparent = yes
+
+								text_single = {
+									position = { 0 0 }
+									text = "[Faith.GetNameNoTooltip]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 200 0 }
+									visible = "[Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
+									text = "[FixedPointToInt( Faith.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 280 0 }
+									text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 350 0 }
+									text = "[GetDataModelSize( Faith.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+									alwaystransparent = yes
+								}
 							}
 						}
 					}
@@ -507,90 +649,71 @@ window = {
 					datamodel = "[GetGlobalList( 'simple_graphs_all_cultures' )]"
 
 					item = {
-						widget = {
-							size = { 420 20 }
-
+						# THE BUTTON IS THE ITEM'S ROOT AND CARRIES THE DATACONTEXT.
+						# An earlier version made this a plain `widget` holding the
+						# datacontext, with a bare `button` nested inside it under the
+						# text. That parsed clean - gui_warnings.log stayed empty and
+						# error.log showed nothing - and did absolutely nothing on click.
+						# Every working example of a clickable datamodel row puts the
+						# button at the top of the item and the datacontext on it:
+						#   workshop 3192256710,
+						#   ATE_character_selection_two_options.gui:25-32
+						#   vanilla window_activity_planner.gui:275-320
+						# so this now matches that shape exactly.
+						#
+						# button_standard rather than a bare `button` for the same reason:
+						# it is what both of those working examples use, and it brings
+						# hover and pressed states for free, so a row visibly reacts to
+						# the mouse. That reaction is itself the first diagnostic - if a
+						# row does not light up on hover, the click is not reaching the
+						# widget at all and nothing downstream matters.
+						button_standard = {
+							size = { 420 26 }
 							datacontext = "[Scope.Culture]"
 
-							text_single = {
-								position = { 0 0 }
-								text = "[Culture.GetNameNoTooltip]"
-							}
-							text_single = {
-								position = { 200 0 }
-								visible = "[Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
-								text = "[FixedPointToInt( Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
-							}
-							text_single = {
-								position = { 280 0 }
-								text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
-							}
-							text_single = {
-								position = { 350 0 }
-								text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+							onclick = "[GetScriptedGui( 'simple_graphs_select_culture_gui' ).Execute( GuiScope.SetRoot( Culture.MakeScope ).End )]"
 
-	### RUNG D - cross-check ####################################################
-	# Same faith, same numbers, reached a completely different way: by KEY, with
-	# no global mirror list involved. These rows must match the "plain points"
-	# rows in the left column exactly, value for value and in the same order.
-	#
-	# This panel also disproves the old note in stats_tracker_effects.txt that
-	# said GUI has no faith-by-key promote. GetFaithByKey is a global promote
-	# returning a real Faith (data_types_uncategorized.txt:475) - it is simply
-	# named Get...ByKey rather than GetFaith(.
-	#
-	# Note the key route is used HERE ONLY, as a check. The registry above
-	# deliberately stores scopes instead, because runtime-created faiths and
-	# hybrid cultures have engine-generated keys.
-	text_single = {
-		position = { 700 394 }
-		text = "SIMPLE_GRAPHS_LBL_XCHECK"
-	}
+							# NO `down =` HERE ON PURPOSE. A previous version lit the
+							# selected row via a query-only scripted GUI's IsShown. It was
+							# evaluated once per row per frame and produced 97,758 script
+							# errors in six seconds - which is how the null-character root
+							# was finally found, so it did its job - but it is not worth
+							# re-adding until the selection itself is working. The
+							# "SHOWING:" line above the plot already names the selection.
 
-	scrollbox = {
-		name = "simple_graphs_xcheck_scroll"
-		position = { 700 420 }
-		size = { 460 256 }
+							tooltip = "SIMPLE_GRAPHS_TT_CLICK"
 
-		blockoverride "scrollbox_content"
-		{
-			vbox = {
-				name = "simple_graphs_xcheck_stack"
+							# The columns keep the exact fixed-size / absolutely-positioned
+							# layout that was arrived at the hard way (hbox and vbox ignore
+							# declared x positions - see README_LINE_GRAPH_PROTOTYPE.md,
+							# "Layout corrections"). They just live inside the button now.
+							# alwaystransparent on the wrapper keeps the whole text block
+							# from swallowing the click.
+							widget = {
+								size = { 100% 100% }
+								alwaystransparent = yes
 
-				widget = {
-					size = { 420 20 }
-					text_single = {
-						position = { 0 0 }
-						text = "SIMPLE_GRAPHS_LBL_XCHECKCOLS"
-					}
-				}
-
-				vbox = {
-					name = "simple_graphs_xcheck_rows"
-					datamodel = "[GetFaithByKey( 'catholic' ).MakeScope.GetList( 'stats_tracker_county_history_plain' )]"
-
-					item = {
-						widget = {
-							size = { 420 20 }
-
-							text_single = {
-								position = { 0 0 }
-								text = "[PdxGuiWidget.GetIndexInDataModel]"
-							}
-							text_single = {
-								position = { 45 0 }
-								text = "[Scope.GetValue]"
-							}
-							text_single = {
-								position = { 180 0 }
-								text = "[FixedPointToInt( Scope.GetValue )]"
+								text_single = {
+									position = { 0 0 }
+									text = "[Culture.GetNameNoTooltip]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 200 0 }
+									visible = "[Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).IsSet]"
+									text = "[FixedPointToInt( Culture.MakeScope.GetVariable( 'stats_tracker_plain_entry' ).GetValue )]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 280 0 }
+									text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_history_plain' ) )]"
+									alwaystransparent = yes
+								}
+								text_single = {
+									position = { 350 0 }
+									text = "[GetDataModelSize( Culture.MakeScope.GetList( 'stats_tracker_county_segments' ) )]"
+									alwaystransparent = yes
+								}
 							}
 						}
 					}
@@ -598,4 +721,5 @@ window = {
 			}
 		}
 	}
+
 }

@@ -155,45 +155,6 @@ stats_tracker_snapshot_effect = {
 				REGISTRY = simple_graphs_all_faiths
 			}
 
-			# RETAINED DELIBERATELY as the in-game cross-check for the generic
-			# path: the same faith's data reached two completely different ways
-			# must agree. Once that has been confirmed on a real save, this whole
-			# if-block and its two loc keys can be deleted.
-			#
-			# CORRECTION - the note that used to sit here claimed "GUI has no
-			# GetFaith('key') promote (checked against logs/data_types/*), so a
-			# per-faith list is unreachable from a .gui file; GetGlobalList is the
-			# only path in". Both halves are wrong, and that is what forced this
-			# hardcode:
-			#   - GetFaithByKey/GetCultureByKey/GetReligionByKey all exist
-			#     (data_types_uncategorized.txt:475, 427, 589). The earlier search
-			#     missed them because they are named Get...ByKey, not GetFaith(.
-			#   - a per-faith list IS reachable, via
-			#     Faith.MakeScope.GetList('name') - Faith.MakeScope at :61019,
-			#     Scope.GetList at data_types_script.txt:3429.
-			# Full write-up: README_FAITH_CULTURE_ENUMERATION.md
-			if = {
-				limit = { this = faith:catholic }
-				add_to_global_variable_list = {
-					name = simple_graphs_catholic_plain
-					target = var:stats_tracker_plain_entry
-				}
-				debug_log = stats_tracker_debug_catholic
-				# stats_tracker_seg_entry only ever exists once a segment has
-				# been produced, so this is exactly "a segment was written".
-				# Snapshot 1 produces none, which is why the seg debug line is
-				# inside this guard rather than beside the one above - reading an
-				# unset variable would spam error.log.
-				if = {
-					limit = { has_variable = stats_tracker_seg_entry }
-					add_to_global_variable_list = {
-						name = simple_graphs_catholic_segments
-						target = var:stats_tracker_seg_entry
-					}
-					debug_log = stats_tracker_debug_catholic_seg
-				}
-			}
-
 			set_variable = { name = stats_tracker_running_count value = 0 }
 		}
 	}
@@ -283,11 +244,19 @@ stats_tracker_snapshot_effect = {
 # no decode, no modulo. Two identical counts in consecutive snapshots differ in
 # the 4th decimal, so they are distinct values and both survive.
 #
-# CAVEAT worth knowing: if CK3 stores variable lists sorted by value rather
-# than by insertion, this list's ORDER is not chronological whenever the count
-# goes down (400.0002 sorts before 443.0001). The segment list below is immune
-# to that, because its snapshot index is the high-order term. The window prints
-# this list in index order precisely so you can see which of the two it is.
+# ORDERING - RESOLVED IN-GAME, 2026-09-13. This used to pose the question of
+# whether CK3 sorts variable lists by value or keeps them in insertion order,
+# because if it sorted by value this list's order would not be chronological
+# whenever the count went down (400.0002 sorts before 443.0001).
+#
+# The answer is INSERTION ORDER. The window's number column read
+# 594.0001, 594.0002, 594.0003, 594.0004, 592.0005 - the smallest value LAST.
+# A value-sorted list would have put 592.0005 first. So this list is
+# chronological and can be relied on as such.
+#
+# Nothing actually depended on the answer: the segment list below was
+# deliberately built to be immune either way, since its snapshot index is the
+# high-order term. It just means the simpler plain list is safe to use too.
 #
 # --------------------------------------------------------------------------
 # (B) stats_tracker_county_segments - one packed entry per LINE SEGMENT
