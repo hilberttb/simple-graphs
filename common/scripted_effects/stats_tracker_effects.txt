@@ -52,6 +52,17 @@ stats_tracker_snapshot_effect = {
 	}
 	change_global_variable = { name = stats_tracker_snapshot_base add = 10000 }
 
+	# ADDED (renderer support): a plain 1,2,3,... snapshot counter. Purely
+	# additive - stats_tracker_snapshot_base above is untouched, so the existing
+	# encoding and everything that reads it behaves exactly as before. This one
+	# exists because the renderer needs the snapshot NUMBER, not number x 10000,
+	# both to tag plain values uniquely and to pack line segments.
+	if = {
+		limit = { NOT = { has_global_variable = stats_tracker_snapshot_index } }
+		set_global_variable = { name = stats_tracker_snapshot_index value = 0 }
+	}
+	change_global_variable = { name = stats_tracker_snapshot_index add = 1 }
+
 	# --- Step 1: zero the running counter on every faith and every culture ---
 	# Done first so that faiths/cultures created mid-campaign (reformations,
 	# hybrid cultures) have the variable defined before we change_variable it.
@@ -110,6 +121,39 @@ stats_tracker_snapshot_effect = {
 				target = var:stats_tracker_encoded
 			}
 			debug_log = stats_tracker_debug_faith
+
+			# ADDED (renderer support). Runs while running_count is still live,
+			# before the reset below. Appends to two NEW lists and touches no
+			# existing variable.
+			stats_tracker_plain_and_segment_effect = yes
+
+			# ADDED: mirror catholic into global lists so the GUI can reach the
+			# data. GUI has no GetFaith('key') promote (checked against
+			# logs/data_types/*), so a per-faith list is unreachable from a .gui
+			# file; GetGlobalList('name') is the only path in. This is the
+			# "catholic-only hardcode" the prototype is scoped to.
+			if = {
+				limit = { this = faith:catholic }
+				add_to_global_variable_list = {
+					name = simple_graphs_catholic_plain
+					target = var:stats_tracker_plain_entry
+				}
+				debug_log = stats_tracker_debug_catholic
+				# stats_tracker_seg_entry only ever exists once a segment has
+				# been produced, so this is exactly "a segment was written".
+				# Snapshot 1 produces none, which is why the seg debug line is
+				# inside this guard rather than beside the one above - reading an
+				# unset variable would spam error.log.
+				if = {
+					limit = { has_variable = stats_tracker_seg_entry }
+					add_to_global_variable_list = {
+						name = simple_graphs_catholic_segments
+						target = var:stats_tracker_seg_entry
+					}
+					debug_log = stats_tracker_debug_catholic_seg
+				}
+			}
+
 			set_variable = { name = stats_tracker_running_count value = 0 }
 		}
 	}
@@ -127,8 +171,151 @@ stats_tracker_snapshot_effect = {
 			target = var:stats_tracker_encoded
 		}
 		debug_log = stats_tracker_debug_culture
+
+		# ADDED (renderer support) - same as the faith branch. No global mirror
+		# here; the prototype renders one faith only.
+		stats_tracker_plain_and_segment_effect = yes
+
 		set_variable = { name = stats_tracker_running_count value = 0 }
 	}
 
 	debug_log = "SIMPLE_GRAPHS ===== county snapshot end ====="
+}
+
+
+###############################################################################
+# ADDED FOR THE RENDERER - stats_tracker_plain_and_segment_effect
+#
+# Called from inside the faith loop and the culture loop of
+# stats_tracker_snapshot_effect above, at the point where
+# var:stats_tracker_running_count still holds THIS snapshot's county count.
+# It only ever writes NEW variables and NEW lists; nothing above changes.
+#
+# It produces two things per object.
+#
+# --------------------------------------------------------------------------
+# (A) stats_tracker_county_history_plain - the decoded count, per snapshot
+# --------------------------------------------------------------------------
+# NOT a bare county count. add_to_variable_list de-duplicates by value (see
+# README_DATA_COLLECTION.md gotcha 3), so a bare count list silently collapses
+# for any object whose count is stable - which was 333 of 384 objects between
+# the two verified snapshots. That is the exact bug the main encoding exists to
+# avoid, and a "plain" list walks straight back into it.
+#
+# The fix keeps the value plain to read while still being unique:
+#
+#       entry = county_count + snapshot_index * 0.0001
+#
+# CK3 variables are fixed point with 5 decimals, so the tag is representable
+# and does not disturb the integer part for the first 9999 snapshots.
+# FixedPointToInt() in the GUI truncates it straight back to the county count -
+# no decode, no modulo. Two identical counts in consecutive snapshots differ in
+# the 4th decimal, so they are distinct values and both survive.
+#
+# CAVEAT worth knowing: if CK3 stores variable lists sorted by value rather
+# than by insertion, this list's ORDER is not chronological whenever the count
+# goes down (400.0002 sorts before 443.0001). The segment list below is immune
+# to that, because its snapshot index is the high-order term. The window prints
+# this list in index order precisely so you can see which of the two it is.
+#
+# --------------------------------------------------------------------------
+# (B) stats_tracker_county_segments - one packed entry per LINE SEGMENT
+# --------------------------------------------------------------------------
+# A `line` widget needs a start point AND an end point, but a datamodel item
+# can only see itself. Two parallel lists do not fix that: the GUI still has no
+# way to read list B at the index it currently sits at in list A without
+# nesting datamodels, and a nested datamodel of the same type (Scope) shadows
+# the outer one, losing the start value. So the pair has to arrive in ONE
+# value.
+#
+#       y          = 300 - clamp( round( count * 0.3 ), 0, 300 )
+#       entry      = snapshot_index * 1000000 + y_prev * 1000 + y_now
+#
+# y is already a pixel offset inside a 300px-tall plot, already flipped for GUI
+# coordinates (y grows downward, so a bigger count gives a smaller y and sits
+# higher). Scaling is done here, in script, not in the GUI.
+#
+# Fixed denominator: 1000 counties spans the full 300px. Deliberately dumb, as
+# scoped - no dynamic max tracking. Counts above 1000 clamp to the top edge.
+#
+# snapshot_index is the high-order term, which does double duty: it makes every
+# entry unique (dedup-proof even for a dead-flat series) and it makes the list
+# monotonically increasing, so index order equals chronological order whether
+# CK3 stores these by insertion or sorted by value.
+#
+# The GUI then reads one entry and pulls both endpoints out of it:
+#       y_now  = Modulo_int32( v, 1000 )
+#       y_prev = Modulo_int32( Divide_int32( v, 1000 ), 1000 )
+# and gets x from PdxGuiWidget.GetIndexInDataModel, which is a real vanilla
+# data function (hud.gui:7952, hud_ruler_objective.gui:198, and ~20 more).
+#
+# The first snapshot for an object produces NO segment - there is nothing to
+# connect to yet. N snapshots give N-1 segments. That is correct, and it also
+# means objects created mid-campaign start their line where they started
+# existing, with no special handling.
+###############################################################################
+
+stats_tracker_plain_and_segment_effect = {
+
+	# --- (A) plain count, uniquified in the 4th decimal ---
+	set_variable = {
+		name = stats_tracker_plain_entry
+		value = global_var:stats_tracker_snapshot_index
+	}
+	change_variable = { name = stats_tracker_plain_entry divide = 10000 }
+	change_variable = {
+		name = stats_tracker_plain_entry
+		add = var:stats_tracker_running_count
+	}
+	add_to_variable_list = {
+		name = stats_tracker_county_history_plain
+		target = var:stats_tracker_plain_entry
+	}
+
+	# --- (B) this snapshot's y, in plot pixels, already flipped ---
+	set_variable = {
+		name = stats_tracker_y_scratch
+		value = var:stats_tracker_running_count
+	}
+	change_variable = { name = stats_tracker_y_scratch multiply = 0.3 }
+	round_variable = { name = stats_tracker_y_scratch nearest = 1 }
+	clamp_variable = { name = stats_tracker_y_scratch min = 0 max = 300 }
+
+	set_variable = { name = stats_tracker_y_now value = 300 }
+	change_variable = {
+		name = stats_tracker_y_now
+		subtract = var:stats_tracker_y_scratch
+	}
+
+	# --- (B) pack the segment, but only once there is a point to connect to ---
+	if = {
+		limit = { has_variable = stats_tracker_prev_y }
+
+		set_variable = {
+			name = stats_tracker_seg_entry
+			value = global_var:stats_tracker_snapshot_index
+		}
+		change_variable = { name = stats_tracker_seg_entry multiply = 1000000 }
+
+		set_variable = {
+			name = stats_tracker_y_scratch
+			value = var:stats_tracker_prev_y
+		}
+		change_variable = { name = stats_tracker_y_scratch multiply = 1000 }
+		change_variable = {
+			name = stats_tracker_seg_entry
+			add = var:stats_tracker_y_scratch
+		}
+		change_variable = {
+			name = stats_tracker_seg_entry
+			add = var:stats_tracker_y_now
+		}
+
+		add_to_variable_list = {
+			name = stats_tracker_county_segments
+			target = var:stats_tracker_seg_entry
+		}
+	}
+
+	set_variable = { name = stats_tracker_prev_y value = var:stats_tracker_y_now }
 }

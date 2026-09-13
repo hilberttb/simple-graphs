@@ -1,0 +1,13 @@
+﻿# Simple Graphs - widget registration.
+#
+# game/gui/scripted_widgets/_scripted_widgets.info documents this as the
+# supported way to add free-standing widgets without overwriting any vanilla
+# .gui file, and explicitly as multi-mod safe. Format is:
+#     <path to gui file> = <name of the top level widget in it>
+#
+# Both names below are prefixed simple_graphs_ and were checked for collisions
+# against all of game/gui, jomini/gui, clausewitz/gui and every installed
+# workshop mod. GUI is first-in-only-served, so a collision would mean this
+# file is silently ignored with no error.
+gui/simple_graphs/simple_graphs_button.gui = simple_graphs_toggle_button
+gui/simple_graphs/simple_graphs_window.gui = simple_graphs_window

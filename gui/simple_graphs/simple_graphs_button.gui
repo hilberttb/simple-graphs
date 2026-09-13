@@ -1,0 +1,40 @@
+﻿###############################################################################
+# Simple Graphs - the floating open/close button.
+#
+# A free-standing widget registered through gui/scripted_widgets/. It overlays
+# the map; it does not modify, inherit from, or override any vanilla screen.
+#
+# Toggle mechanism is the vanilla one:
+#   onclick  = "[GetVariableSystem.Toggle( 'name' )]"
+#   visible  = "[GetVariableSystem.Exists( 'name' )]"
+# exactly as game/gui/activity_window_widgets/tournament_progress_to_victory_widget.gui
+# does at lines 114 / 121 / 127. VariableSystem.Toggle and .Exists are both
+# confirmed present in logs/data_types/data_types_common.txt.
+#
+# Placed top-centre, below the resource bar, over open map. Move the position
+# line if it lands on something in your setup.
+###############################################################################
+
+widget = {
+	name = "simple_graphs_toggle_button"
+	datacontext = "[GetVariableSystem]"
+
+	parentanchor = top|hcenter
+	position = { 0 120 }
+	size = { 220 34 }
+	layer = middle
+	allow_outside = yes
+
+	# Kept to one predicate on purpose. IsDefaultGUIMode would also be
+	# reasonable here (the HRT workshop mod pairs the two) but every extra
+	# condition is another way for the button to silently not appear, and
+	# this prototype wants the button findable above all else.
+	visible = "[IsInGame]"
+
+	button_standard = {
+		name = "simple_graphs_toggle_button_press"
+		size = { 220 34 }
+		text = "SIMPLE_GRAPHS_OPEN_BUTTON"
+		onclick = "[GetVariableSystem.Toggle( 'simple_graphs_window_open' )]"
+	}
+}

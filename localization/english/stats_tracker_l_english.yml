@@ -2,3 +2,19 @@
  stats_tracker_debug_snapshot_date:0 "SIMPLE_GRAPHS snapshot on [GetCurrentDate.GetStringLong] (year [GetCurrentDate.GetYear])"
  stats_tracker_debug_faith:0 "SIMPLE_GRAPHS FAITH [THIS.Faith.GetNameNoTooltip] counties=[THIS.Var('stats_tracker_running_count').GetValue] enc=[THIS.Var('stats_tracker_encoded').GetValue]"
  stats_tracker_debug_culture:0 "SIMPLE_GRAPHS CULTURE [THIS.Culture.GetNameNoTooltip] counties=[THIS.Var('stats_tracker_running_count').GetValue] enc=[THIS.Var('stats_tracker_encoded').GetValue]"
+ stats_tracker_debug_catholic:0 "SIMPLE_GRAPHS_RENDER catholic counties=[THIS.Var('stats_tracker_running_count').GetValue] plain=[THIS.Var('stats_tracker_plain_entry').GetValue] y_now=[THIS.Var('stats_tracker_y_now').GetValue]"
+ stats_tracker_debug_catholic_seg:0 "SIMPLE_GRAPHS_RENDER catholic segment packed=[THIS.Var('stats_tracker_seg_entry').GetValue] (decode: y_start = packed/1000 mod 1000, y_end = packed mod 1000)"
+
+# ---- renderer UI ------------------------------------------------------------
+# No square brackets in any of these literal labels: brackets are data-function
+# syntax, not text (README_DATA_COLLECTION.md gotcha 5).
+ SIMPLE_GRAPHS_OPEN_BUTTON:0 "County graph (catholic)"
+ SIMPLE_GRAPHS_WINDOW_TITLE:0 "Simple Graphs - catholic counties over time"
+ SIMPLE_GRAPHS_CLOSE:0 "Close"
+ SIMPLE_GRAPHS_LBL_REFS:0 "Reference strip - 3 strokes = line, FloatToCVector2f, int math"
+ SIMPLE_GRAPHS_LBL_PLOT:0 "Plot - one segment per snapshot pair, oldest at left. Higher = more counties."
+ SIMPLE_GRAPHS_LBL_SNAPSHOTS:0 "snapshots taken:"
+ SIMPLE_GRAPHS_LBL_SEGCOUNT:0 "segments:"
+ SIMPLE_GRAPHS_LBL_PLAINCOUNT:0 "plain points:"
+ SIMPLE_GRAPHS_LBL_SEGCOLS:0 "idx / packed entry / y start / y end"
+ SIMPLE_GRAPHS_LBL_PLAINCOLS:0 "idx / stored value / counties"

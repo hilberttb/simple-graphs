@@ -1,0 +1,377 @@
+﻿###############################################################################
+# Simple Graphs - connected line graph prototype (catholic county count).
+#
+# Deliberately ugly. No axes, no scale markers, no legend, no styling beyond
+# what is needed to see the line. Its whole job is to prove that a genuine
+# multi-point connected line, built from real script data, draws on screen and
+# grows by one segment per snapshot.
+#
+# ---------------------------------------------------------------------------
+# THE DIAGNOSTIC LADDER - read this if it does not work
+# ---------------------------------------------------------------------------
+# Several unproven mechanisms land here at once, so the window is built as a
+# ladder of independent rungs. Whichever rung is the last one you can see tells
+# you exactly which mechanism failed:
+#
+#   Rung 1  "REF A"   a `line` with literal from/to.
+#                     Visible => the line widget renders in this window at all.
+#                     This is vanilla-proven syntax (window_dynasty_tree.gui:79).
+#
+#   Rung 2  "REF B"   a `line` whose from/to come from FloatToCVector2f() with
+#                     literal floats.
+#                     Visible => FloatToCVector2f is accepted as a from/to
+#                     binding. NOTHING in vanilla or in any installed mod does
+#                     this - the function is confirmed to exist in
+#                     logs/data_types/data_types_common.txt:321 but its use on
+#                     a line endpoint is unproven. This rung is the single
+#                     riskiest assumption in the whole prototype.
+#
+#   Rung 3  "REF C"   same, but the coordinates are produced by the same
+#                     int32 -> float chain the real graph uses
+#                     (Modulo_int32 / Divide_int32 / IntToFloat), on constants.
+#                     Visible => the arithmetic chain is sound.
+#
+#   Rung 4            the actual data-driven series.
+#                     Visible => everything works.
+#
+#   Numbers panel     prints the raw list contents and the decoded endpoints.
+#                     If rungs 1-3 draw but rung 4 does not, and the numbers
+#                     panel is empty, the problem is the DATA (no global list).
+#                     If the numbers panel shows sensible values but no line
+#                     draws, the problem is the COORDINATE BINDING.
+#
+# ---------------------------------------------------------------------------
+# COORDINATES
+# ---------------------------------------------------------------------------
+# Script hands the GUI one packed number per segment:
+#     entry = snapshot_index * 1000000 + y_start * 1000 + y_end
+# with y already a pixel offset in a 300px-tall plot and already flipped for
+# GUI coordinates. See stats_tracker_plain_and_segment_effect.
+#
+#     y_start = Modulo_int32( Divide_int32( v, 1000 ), 1000 )
+#     y_end   = Modulo_int32( v, 1000 )
+#     x_start = index * 30      x_end = (index + 1) * 30
+#
+# Divide_int32 is only used to shift the packed value right by one field, and
+# it is safe whether it truncates or rounds to nearest: y_end is at most 300,
+# so the discarded remainder is never at or above half a unit and can never
+# round the quotient up. Nothing here depends on knowing which it does.
+#
+# x comes from PdxGuiWidget.GetIndexInDataModel, which is real and widely used
+# in vanilla (hud.gui:7952, hud_ruler_objective.gui:198, and ~20 more sites),
+# so no script-side x list is needed.
+#
+# At 30px per segment the plot holds 20 segments before running past its right
+# edge. Fine for a prototype; a dynamic step via GetDataModelSize is the
+# obvious later change.
+#
+# ---------------------------------------------------------------------------
+# SCROLLAREAS
+# ---------------------------------------------------------------------------
+# GUI_RESEARCH.md open question #5 asked whether a `line` survives inside a
+# scrollarea. Vanilla already answers it: vbox_domicile_upgrade_tree
+# (window_domicile.gui:3508) contains data-bound `line` widgets and is rendered
+# inside a scrollbox via blockoverride "scrollbox_content"
+# (window_domicile.gui:3177-3199), with both scrollbars set to as_needed. So
+# lines do render inside a scrollarea in shipping code. The plot below is still
+# kept out of any scrollarea, to keep the prototype's failure modes few.
+#
+# Note also that the vanilla templates which live inside that scrollbox
+# (Line_Domicile_*) do NOT set effectname, i.e. they use the default line
+# effect rather than PdxGuiLineScreenSpace. The templates below follow them.
+###############################################################################
+
+# Both template names checked for collisions across game/gui, jomini/gui,
+# clausewitz/gui and every installed workshop mod. GUI is first-in-only-served.
+template SimpleGraphsLineData
+{
+	width = 3
+	line_cap = yes
+	color = { 1.0 1.0 1.0 1.0 }
+	texture = "gfx/lines/white.dds"
+	uv_scale = { 1.0 1.0 }
+	mask = "gfx/lines/white.dds"
+	mask_uv_scale = { 1.0 1.0 }
+}
+
+template SimpleGraphsLineRef
+{
+	width = 2
+	line_cap = yes
+	color = { 0.55 0.55 0.55 1.0 }
+	texture = "gfx/lines/white.dds"
+	uv_scale = { 1.0 1.0 }
+	mask = "gfx/lines/white.dds"
+	mask_uv_scale = { 1.0 1.0 }
+}
+
+window = {
+	name = "simple_graphs_window"
+	datacontext = "[GetVariableSystem]"
+
+	parentanchor = center
+	size = { 680 620 }
+	layer = windows_layer
+	movable = yes
+
+	visible = "[GetVariableSystem.Exists( 'simple_graphs_window_open' )]"
+
+	# Background as a child widget rather than a property on the window itself,
+	# so nothing depends on a template this prototype has not verified.
+	widget = {
+		size = { 100% 100% }
+		background = {
+			texture = "gfx/interface/colors/black.dds"
+			alpha = 0.92
+		}
+	}
+
+	### header ###################################################################
+	text_single = {
+		position = { 20 14 }
+		text = "SIMPLE_GRAPHS_WINDOW_TITLE"
+	}
+
+	button_standard = {
+		parentanchor = top|right
+		position = { -16 10 }
+		size = { 90 28 }
+		text = "SIMPLE_GRAPHS_CLOSE"
+		onclick = "[GetVariableSystem.Toggle( 'simple_graphs_window_open' )]"
+	}
+
+	### rungs 1-3: line widget sanity strip ####################################
+	text_single = {
+		position = { 20 46 }
+		text = "SIMPLE_GRAPHS_LBL_REFS"
+	}
+
+	widget = {
+		name = "simple_graphs_ref_strip"
+		position = { 40 68 }
+		size = { 600 40 }
+		allow_outside = yes
+
+		background = {
+			texture = "gfx/interface/colors/black.dds"
+			alpha = 0.45
+		}
+
+		# RUNG 1 - literal from/to. Vanilla-proven (window_dynasty_tree.gui:79).
+		line = {
+			using = SimpleGraphsLineRef
+			from = { 0 38 }
+			to = { 180 2 }
+		}
+
+		# RUNG 2 - FloatToCVector2f with literal floats. Unproven anywhere.
+		line = {
+			using = SimpleGraphsLineRef
+			from = "[FloatToCVector2f( '(float)200', '(float)38' )]"
+			to = "[FloatToCVector2f( '(float)380', '(float)2' )]"
+		}
+
+		# RUNG 3 - same, coordinates built through the int32 -> float chain the
+		# real series uses. Modulo_int32( 1420, 1000 ) = 420,
+		# Divide_int32( 600000, 1000 ) = 600.
+		line = {
+			using = SimpleGraphsLineRef
+			from = "[FloatToCVector2f( IntToFloat( Modulo_int32( '(int32)1420', '(int32)1000' ) ), '(float)38' )]"
+			to = "[FloatToCVector2f( IntToFloat( Divide_int32( '(int32)600000', '(int32)1000' ) ), '(float)2' )]"
+		}
+	}
+
+	### rung 4: the actual graph ###############################################
+	# NOTE: a horizontal scrollbox was tried here on 2026-09-12 to stop the line
+	# running past the window once the series passes ~20 segments. It did not
+	# work - no scrollbar appeared and nothing was clipped - and was reverted.
+	# Do not retry it in that shape. Details in the project memory,
+	# ck3-scrollbox-does-not-contain-line-widgets.
+	text_single = {
+		position = { 20 116 }
+		text = "SIMPLE_GRAPHS_LBL_PLOT"
+	}
+
+	widget = {
+		name = "simple_graphs_plot_area"
+		position = { 40 138 }
+		size = { 600 300 }
+		allow_outside = yes
+
+		background = {
+			texture = "gfx/interface/colors/black.dds"
+			alpha = 0.45
+		}
+
+		# One `line` per consecutive pair of snapshots, oldest to newest.
+		# Structure copied from the vanilla perk-tree connector block
+		# (window_character_lifestyle.gui:978-1010): a plain widget carrying the
+		# datamodel, one container per item, the line inside it. Items all sit at
+		# the container origin and place themselves purely via from/to.
+		widget = {
+			name = "simple_graphs_series"
+			size = { 100% 100% }
+			allow_outside = yes
+
+			datamodel = "[GetGlobalList( 'simple_graphs_catholic_segments' )]"
+
+			item = {
+				container = {
+					allow_outside = yes
+
+					line = {
+						using = SimpleGraphsLineData
+						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), '(float)30' ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
+						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), '(float)30' ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
+					}
+				}
+			}
+		}
+	}
+
+	### numbers panel ##########################################################
+	# Exists so that a failure is diagnosable without guessing. If these read
+	# correctly the data pipeline is fine and any problem is in the coordinates.
+	#
+	# LAYOUT NOTE - why every row here is a fixed-size widget with absolutely
+	# positioned children instead of an hbox.
+	#
+	# The first version used nested vbox/hbox with minimumsize on each cell.
+	# hbox and vbox expand to their parent's width and then CENTRE their content
+	# block inside it, so the declared x positions were not honoured: the left
+	# column, declared at x 40, rendered at about x 256, and the right column,
+	# declared at x 400, rendered at about x 649 - which pushed its last two
+	# cells to x 689 and x 809, at and past the window's own right edge. Row
+	# pitch went the same way: minimumsize said 16, measured pitch was about 61,
+	# so only 2.4 rows fitted where the doc estimated 9.
+	#
+	# A plain `widget` with an explicit size and `position` on each child has no
+	# layout engine involved at all, so the columns land exactly where they are
+	# declared. The outer vbox is still used, but only to stack rows vertically,
+	# which it already did correctly.
+	#
+	# The two lists are now stacked one above the other rather than side by
+	# side, so nothing here depends on horizontal screen space, and the whole
+	# block sits in a scrollbox so rows past the bottom are reachable instead of
+	# silently clipped. Scrollbox pattern copied from window_struggle.gui:883-897
+	# (scrollbox + blockoverride "scrollbox_content" + a datamodel vbox).
+
+	widget = {
+		name = "simple_graphs_counters"
+		position = { 40 446 }
+		size = { 600 20 }
+
+		text_single = {
+			position = { 0 0 }
+			text = "SIMPLE_GRAPHS_LBL_SNAPSHOTS"
+		}
+		text_single = {
+			position = { 130 0 }
+			visible = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).IsSet]"
+			text = "[GetGlobalVariable( 'stats_tracker_snapshot_index' ).GetValue]"
+		}
+		text_single = {
+			position = { 190 0 }
+			text = "SIMPLE_GRAPHS_LBL_SEGCOUNT"
+		}
+		text_single = {
+			position = { 270 0 }
+			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_catholic_segments' ) )]"
+		}
+		text_single = {
+			position = { 330 0 }
+			text = "SIMPLE_GRAPHS_LBL_PLAINCOUNT"
+		}
+		text_single = {
+			position = { 430 0 }
+			text = "[GetDataModelSize( GetGlobalList( 'simple_graphs_catholic_plain' ) )]"
+		}
+	}
+
+	scrollbox = {
+		name = "simple_graphs_numbers_scroll"
+		position = { 40 472 }
+		size = { 600 136 }
+
+		blockoverride "scrollbox_content"
+		{
+			vbox = {
+				name = "simple_graphs_numbers_stack"
+
+				# --- segment list -------------------------------------------
+				widget = {
+					size = { 540 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SIMPLE_GRAPHS_LBL_SEGCOLS"
+					}
+				}
+
+				vbox = {
+					name = "simple_graphs_segment_rows"
+					datamodel = "[GetGlobalList( 'simple_graphs_catholic_segments' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
+							}
+							text_single = {
+								position = { 260 0 }
+								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
+							}
+						}
+					}
+				}
+
+				# --- plain list, stacked BELOW the segment list --------------
+				# Printed in datamodel index order on purpose: this is still the
+				# cheap experiment for whether CK3 stores variable lists by
+				# insertion or sorted by value. If catholic's count ever drops
+				# and these stay chronological, they are insertion-ordered.
+				widget = {
+					size = { 540 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SIMPLE_GRAPHS_LBL_PLAINCOLS"
+					}
+				}
+
+				vbox = {
+					name = "simple_graphs_plain_rows"
+					datamodel = "[GetGlobalList( 'simple_graphs_catholic_plain' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[FixedPointToInt( Scope.GetValue )]"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
