@@ -11,16 +11,51 @@
 # does at lines 114 / 121 / 127. VariableSystem.Toggle and .Exists are both
 # confirmed present in logs/data_types/data_types_common.txt.
 #
-# Placed top-centre, below the resource bar, over open map. Move the position
-# line if it lands on something in your setup.
+# ---------------------------------------------------------------------------
+# PLACEMENT - top-left, clear of the two vanilla things that are already there
+# ---------------------------------------------------------------------------
+# History: top-centre { 0 120 } -> left of the Outliner { -383 120 } -> here.
+#
+# Now TOP-LEFT, anchored to the left edge so the gap is a real margin at any
+# resolution rather than a number tuned against one screen.
+#
+# THE TOP BAR IS NOT A CONSTRAINT ON THIS SIDE. Its container is declared
+# `size = { 100% 88 }` at `position = { 0 -24 }` (hud.gui), i.e. nominally the
+# full screen width down to about y = 64 - but the bar only actually DRAWS on
+# the right, so the top-left is clear. Do not reintroduce that 64 as a floor
+# here; it was measured off the declared container, not off anything visible.
+#
+# The leftmost slot is taken, so this button sits BESIDE its occupant rather
+# than in the corner itself. That occupant is the RULER OBJECTIVES button:
+#     container     parentanchor = top|left  position = { 8 16 }   hud.gui:256-259
+#     button_round  size = { 84 84 }                               hud.gui:263-265
+# i.e. x 8..92, y 16..100. It is conditional - it needs
+# GetPlayersRulerObjectiveDecision.IsValid and the objective view closed - so
+# it may well never have been seen on a given save, but it is a normal thing to
+# have active and it is cheap to sit clear of it.
+#
+#   x = 104   12px to the right of that button's right edge (92).
+#   y = 41    vertically CENTRED on it: 16 + (84 - 34) / 2. The two then read
+#             as a row rather than as two things that happen to be near
+#             each other.
+#
+# If the ruler objective button is absent, this simply sits alone near the
+# top-left with a 104px inset, which is the intended look either way.
+#
+# ONE TRANSIENT OVERLAP, ACCEPTED. Clicking that round button opens the ruler
+# objective PANEL, which is `parentanchor = top|left  position = { 16 24 }`
+# `size = { 512 768 }` (hud_ruler_objective.gui:11-13) - it blankets the whole
+# top-left corner, so it covers this button while open no matter where in that
+# corner this sits. Nothing to design around: the round button itself hides
+# while that view is open, and the panel is something the player opened.
 ###############################################################################
 
 widget = {
 	name = "sg_toggle_button"
 	datacontext = "[GetVariableSystem]"
 
-	parentanchor = top|hcenter
-	position = { 0 120 }
+	parentanchor = top|left
+	position = { 104 41 }
 	size = { 220 34 }
 	layer = middle
 	allow_outside = yes

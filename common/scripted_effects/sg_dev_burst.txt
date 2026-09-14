@@ -1,0 +1,89 @@
+﻿###############################################################################
+# Simple Graphs - snapshot burst, for limit testing. NOT part of the mod.
+#
+# Gitignored scaffolding. Delete the file when done; nothing references it.
+#
+# USAGE (console, debug mode):
+#
+#     effect sg_dev_burst_effect = { COUNT = 25 }
+#
+# or, if console parameter passing misbehaves, the no-argument wrappers:
+#
+#     effect sg_dev_burst_10 = yes
+#     effect sg_dev_burst_50 = yes
+#     effect sg_dev_burst_200 = yes
+#
+# `while = { count = N <effects> }` is scope none with a DEFAULT MAX OF 1000 per
+# invocation (logs/effects.log:2849-2853), so 1000 is the ceiling for a single
+# call. Run it repeatedly to go past that.
+#
+# Every snapshot in a burst lands on the SAME in-game date. The encoding does
+# not care - sg_snapshot_index still increments once per snapshot and
+# is what tags every entry - but the "snapshot on <date>" debug line will repeat
+# identically, so count SIMPLE_GRAPHS_BURST markers rather than dates.
+#
+# Expect heavy logging: the snapshot effect writes one debug_log line per faith
+# and per culture, so ~300 lines per snapshot. COUNT = 200 is ~60,000 lines.
+# Each snapshot is also a full every_county pass (~4000 counties) plus zeroing
+# ~300 objects, so a large burst will hitch for a while. That is the point.
+#
+# ---------------------------------------------------------------------------
+# WHAT WILL BREAK FIRST, in the order it is likely to happen
+# ---------------------------------------------------------------------------
+# 1. THE PLOT RUNS OFF ITS AREA, at ~20 segments. Cosmetic, known, documented in
+#    README_LINE_GRAPH_PROTOTYPE.md: x is index * 30 in a 600px-wide plot. The
+#    line keeps being correct, it just leaves the box. The auto-fit recipe is in
+#    that README - swap the two '(float)30' literals for
+#    Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( ... ), '(int32)1' ) ) ).
+#
+# 2. THE PACKED SEGMENT VALUE GETS LARGE, and this is the one actually worth
+#    watching, because it is the least-tested number in the mod:
+#
+#        entry = snapshot_index * 1000000 + y_start * 1000 + y_end
+#
+#    README_DATA_COLLECTION.md records values up to 20,000,000 as verified
+#    working - that is only snapshot ~20. At snapshot 500 the entry is
+#    500,000,000; at snapshot 9000, 9,000,000,000. CK3 variables are fixed point
+#    with 5 decimals, so the true ceiling should be far higher, but it has never
+#    been tested here. Watch the "idx / packed entry / y start / y end" column:
+#    y start and y end must stay in 0-300 and must match the plotted line. If
+#    they start coming out wrong while the raw packed entry keeps growing, the
+#    multiply overflowed.
+#
+# 3. THE PLAIN LIST'S TAG COLLIDES AT SNAPSHOT 10000, by construction:
+#
+#        entry = county_count + snapshot_index * 0.0001
+#
+#    At 10000 the tag reaches 1.0 and starts corrupting the integer part, i.e.
+#    the county count itself. 9999 is the documented hard limit. The packed
+#    segment list is immune - its index is the high-order term.
+#
+# 4. SAVE SIZE AND LOAD TIME. Every snapshot appends one entry per faith and per
+#    culture to three lists each, on ~300 objects, all persisted. That is the
+#    growth the retention-capping TODO in sg_c_faithculture_collect.txt is about,
+#    and a big burst is the cheapest way to find out how much it actually costs.
+#
+# Note 1 is cosmetic and 3 is unreachable in normal play. 2 and 4 are the real
+# experiments.
+###############################################################################
+
+sg_dev_burst_effect = {
+	debug_log = "SIMPLE_GRAPHS_BURST begin"
+	while = {
+		count = $COUNT$
+		sg_snapshot_collect_effect = yes
+	}
+	debug_log = "SIMPLE_GRAPHS_BURST end"
+}
+
+sg_dev_burst_10 = {
+	sg_dev_burst_effect = { COUNT = 10 }
+}
+
+sg_dev_burst_50 = {
+	sg_dev_burst_effect = { COUNT = 50 }
+}
+
+sg_dev_burst_200 = {
+	sg_dev_burst_effect = { COUNT = 200 }
+}

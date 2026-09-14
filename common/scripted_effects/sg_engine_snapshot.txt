@@ -21,9 +21,38 @@
 #   sg_snapshot_base    10000, 20000, ...  the older scaled counter, kept
 #                                      because a consumer may still encode
 #                                      base + value as a cross-check.
+#   sg_snapshot_year    the ingame year this snapshot was taken in.
 #
-# Both are guarded on first use because neither global exists until the first
-# snapshot runs.
+# Both counters are guarded on first use because neither global exists until
+# the first snapshot runs. sg_snapshot_year is not, because it is overwritten
+# rather than incremented.
+#
+# ---------------------------------------------------------------------------
+# WHY THE YEAR IS READ FROM THE GAME RATHER THAN DERIVED FROM THE INDEX
+# ---------------------------------------------------------------------------
+# The x axis wants a real year per point. The obvious cheap alternative -
+# store the start year once and compute start_year + sg_snapshot_index - is
+# WRONG, and not marginally:
+#
+#   sg_snapshot_index advances on EVERY snapshot, including console-forced
+#   ones. A save that has had a few hundred forced snapshots run against it
+#   would report years centuries into the future while the underlying counts
+#   are perfectly fine.
+#
+# Reading the actual date is immune to that, because it records what happened
+# instead of assuming a cadence. Forced snapshots then simply produce several
+# points sharing one year, which is the truth.
+#
+# `value = current_year` inside set_variable / set_global_variable is
+# vanilla-proven, not inferred:
+#   current_year            logs/triggers.log:556-558, "Compare the current
+#                           ingame year", Supported Scopes: none
+#   set_variable        value = current_year
+#                           00_ep1_hold_court_effects.txt:34-37
+#   set_global_variable value = current_year
+#                           common/on_action/<the landed-realm on_actions file>:79-84
+# and it is used as a value in ~20 further vanilla sites including
+# common/script_values/.
 #
 # ---------------------------------------------------------------------------
 # sg_engine_register_object_effect
@@ -93,6 +122,10 @@ sg_engine_begin_snapshot_effect = {
 		set_global_variable = { name = sg_snapshot_index value = 0 }
 	}
 	change_global_variable = { name = sg_snapshot_index add = 1 }
+
+	# The ingame year this snapshot is being taken in. Read from the game, not
+	# derived from the index - see the header for why that distinction matters.
+	set_global_variable = { name = sg_snapshot_year value = current_year }
 }
 
 sg_engine_register_object_effect = {

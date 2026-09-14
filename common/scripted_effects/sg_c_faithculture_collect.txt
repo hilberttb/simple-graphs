@@ -152,8 +152,8 @@ sg_c_faithculture_snapshot_effect = {
 	# --- Step 3: encode, append to the persistent history, reset ---
 	# TODO (deferred, known): these lists grow forever - one entry per faith and
 	# per culture per snapshot - and are read/written on every save from here on.
-	# Retention-capping or downsampling will be needed eventually. Not built yet
-	# on purpose; get the collection mechanism testable first.
+	# Retention-capping or downsampling may be needed eventually. Not built yet
+	# on purpose.
 	#
 	# RESOLVED EDGE CASE: faiths and cultures created mid-campaign used to be a
 	# problem, because their lists were shorter and "list position N = year N"
@@ -194,6 +194,7 @@ sg_c_faithculture_snapshot_effect = {
 				PLAIN_LIST = sg_faithculture_counties
 				PLAIN_VAR  = sg_faithculture_counties_now
 				SEG_LIST   = sg_faithculture_counties_seg
+				YEAR_LIST  = sg_faithculture_years
 				PREV_Y_VAR = sg_faithculture_prev_y
 				Y_SCALE    = 0.3
 				Y_MAX      = 300
@@ -233,6 +234,7 @@ sg_c_faithculture_snapshot_effect = {
 			PLAIN_LIST = sg_faithculture_counties
 			PLAIN_VAR  = sg_faithculture_counties_now
 			SEG_LIST   = sg_faithculture_counties_seg
+			YEAR_LIST  = sg_faithculture_years
 			PREV_Y_VAR = sg_faithculture_prev_y
 			Y_SCALE    = 0.3
 			Y_MAX      = 300

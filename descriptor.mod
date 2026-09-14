@@ -1,4 +1,4 @@
-version="1.0"
+version="0.1"
 tags={
 	"1.19 'Scribe'"
 	"Graphics"
@@ -8,4 +8,4 @@ tags={
 	"Utilities"
 }
 name="Simple Graphs"
-supported_version="1.19.0.6"
+supported_version="1.19.*"

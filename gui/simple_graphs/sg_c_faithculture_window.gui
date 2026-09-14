@@ -24,7 +24,7 @@
 #
 #     y_start = Modulo_int32( Divide_int32( v, 1000 ), 1000 )
 #     y_end   = Modulo_int32( v, 1000 )
-#     x_start = index * 30      x_end = (index + 1) * 30
+#     x_start = index * STEP    x_end = (index + 1) * STEP
 #
 # Divide_int32 is only used to shift the packed value right by one field, and
 # it is safe whether it truncates or rounds to nearest: y_end is at most 300,
@@ -35,9 +35,37 @@
 # in vanilla (hud.gui:7952, hud_ruler_objective.gui:198, and ~20 more sites),
 # so no script-side x list is needed.
 #
-# At 30px per segment the plot holds 20 segments before running past its right
-# edge. Fine for a prototype; a dynamic step via GetDataModelSize is the
-# obvious later change.
+# ---------------------------------------------------------------------------
+# THE X STEP AUTO-FITS. It used to be a hardcoded 30px.
+# ---------------------------------------------------------------------------
+#     STEP = Divide_float( '(float)600',
+#                IntToFloat( Max_int32( GetDataModelSize( <the segment list> ),
+#                                       '(int32)1' ) ) )
+#
+# At a fixed 30px the plot held only 20 segments before the line ran past the
+# plot area and then past the window itself. The series now always fills the
+# 600px plot exactly and CAN NEVER LEAVE IT, whatever the snapshot count.
+#
+# The accepted trade, decided deliberately: the x axis COMPRESSES as snapshots
+# accumulate instead of staying 30px per year. Spacing is therefore not
+# comparable between two objects with different history lengths.
+#
+# Max_int32( ..., 1 ) is the divide-by-zero guard. An object with a single
+# snapshot has ZERO segments, and 600/0 would be undefined; the guard makes the
+# step 600 and the lone point sits at x = 0, which is correct because there is
+# no line to draw anyway.
+#
+# DO NOT "fix" the compression by wrapping the plot in a horizontally scrolling
+# scrollbox. That was tried on 2026-09-12 and does not work: no scrollbar
+# appeared, nothing was clipped, and the line drew straight across the whole
+# screen at 43 segments. The data-bound size on the content widget DID take
+# effect and the numbers panel in this same window scrolls vertically without
+# trouble, so the failure is specific to scrolling a container of `line`
+# widgets. Vanilla's domicile precedent proves lines RENDER inside a scrollbox,
+# not that they SCROLL inside one. This auto-fit is what replaced that idea.
+#
+# The divisor is the SEGMENT list, not the year list - see the x-axis block
+# below, whose labels must land on the same step or they drift off the points.
 #
 # ---------------------------------------------------------------------------
 # SCROLLAREAS
@@ -244,8 +272,8 @@ window = {
 
 					line = {
 						using = sg_engine_line_data
-						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), '(float)30' ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
-						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), '(float)30' ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
+						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
+						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
 					}
 				}
 			}
@@ -266,8 +294,118 @@ window = {
 
 					line = {
 						using = sg_engine_line_data
-						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), '(float)30' ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
-						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), '(float)30' ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
+						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
+						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
+					}
+				}
+			}
+		}
+	}
+
+	### THE X AXIS - IN-GAME YEARS ##############################################
+	# Labels only. There is deliberately NO y axis.
+	#
+	# ---------------------------------------------------------------------
+	# WHERE THE YEAR COMES FROM
+	# ---------------------------------------------------------------------
+	# Each entry of the per-object year list is sg_snapshot_index * 10000 +
+	# year, written by sg_engine_append_point_effect at the same moment the
+	# point itself is written. The year is READ FROM THE GAME at snapshot time
+	# (current_year), not derived as start_year + index - deriving it breaks on
+	# any save that has had console-forced snapshots run against it, because
+	# the index advances for those too while the calendar does not.
+	#
+	# The list is per object rather than global so that an object whose history
+	# begins mid-campaign is labelled with ITS OWN years. The plot stretches
+	# each object's own series across the full 600px, so a culture created at
+	# snapshot 50 has its first point at x = 0, and a global list read by
+	# position would label that point with snapshot 1's year.
+	#
+	# ---------------------------------------------------------------------
+	# SPACING - MUST MATCH THE LINE, OR THE LABELS DRIFT OFF THE POINTS
+	# ---------------------------------------------------------------------
+	# The step divisor is GetDataModelSize of the SEGMENT list, character for
+	# character the same expression the line's from/to use. It is NOT the year
+	# list's own size: N snapshots give N year entries but only N-1 segments,
+	# so dividing by the year count would compress every label by a factor of
+	# (N-1)/N and the drift would grow along the axis.
+	#
+	# Label i therefore sits at i * 600/(N-1), which puts the first at x = 0
+	# and the last at x = 600 - exactly the two ends of the line.
+	#
+	# The 20px left shift centres a four-digit year on its point rather than
+	# starting it there. It is half the declared 40px box.
+	#
+	# ---------------------------------------------------------------------
+	# HOW MANY LABELS
+	# ---------------------------------------------------------------------
+	# Every Nth snapshot, N = max( year_count / 6, 1 ), so the axis carries
+	# roughly six to twelve labels at any history length instead of one per
+	# snapshot - which at 100+ snapshots would be unreadable.
+	#
+	# Max_int32( ..., 1 ) is doing real work twice over: it stops Modulo_int32
+	# ever being handed a 0 (undefined), which is reachable for any history
+	# shorter than six snapshots, AND it makes the result independent of
+	# whether Divide_int32 truncates or rounds - something this project has
+	# never established. Either behaviour just shifts the label count a little.
+	#
+	# Both blocks below are near-identical for the same reason every other pair
+	# in this window is: the selection is either a Faith or a Culture, the type
+	# is carried structurally by two mutually-exclusive globals, and CK3 has no
+	# polymorphic accessor that would let one block serve both.
+	widget = {
+		name = "sg_c_fc_xaxis"
+		position = { 40 442 }
+		size = { 600 20 }
+		allow_outside = yes
+
+		# --- selection is a FAITH ----------------------------------------
+		widget = {
+			name = "sg_c_fc_xaxis_faith"
+			size = { 100% 100% }
+			allow_outside = yes
+
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_years' )]"
+
+			item = {
+				widget = {
+					size = { 40 20 }
+					allow_outside = yes
+
+					visible = "[EqualTo_int32( Modulo_int32( PdxGuiWidget.GetIndexInDataModel, Max_int32( Divide_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_years' ) ), '(int32)6' ), '(int32)1' ) ), '(int32)0' )]"
+					position = "[FloatToCVector2f( Subtract_float( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), '(float)20' ), '(float)0' )]"
+
+					text_single = {
+						position = { 0 0 }
+						text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)10000' )]"
+						alwaystransparent = yes
+					}
+				}
+			}
+		}
+
+		# --- selection is a CULTURE --------------------------------------
+		widget = {
+			name = "sg_c_fc_xaxis_culture"
+			size = { 100% 100% }
+			allow_outside = yes
+
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_years' )]"
+
+			item = {
+				widget = {
+					size = { 40 20 }
+					allow_outside = yes
+
+					visible = "[EqualTo_int32( Modulo_int32( PdxGuiWidget.GetIndexInDataModel, Max_int32( Divide_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_years' ) ), '(int32)6' ), '(int32)1' ) ), '(int32)0' )]"
+					position = "[FloatToCVector2f( Subtract_float( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), '(float)20' ), '(float)0' )]"
+
+					text_single = {
+						position = { 0 0 }
+						text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)10000' )]"
+						alwaystransparent = yes
 					}
 				}
 			}
@@ -286,7 +424,7 @@ window = {
 	# Cheap to keep, and the first thing to read if a plot ever looks wrong.
 	widget = {
 		name = "sg_c_fc_sel_counters"
-		position = { 40 446 }
+		position = { 40 468 }
 		size = { 600 20 }
 
 		text_single = {
@@ -336,7 +474,7 @@ window = {
 
 	scrollbox = {
 		name = "sg_c_fc_sel_numbers_scroll"
-		position = { 40 472 }
+		position = { 40 494 }
 		size = { 600 136 }
 
 		blockoverride "scrollbox_content"

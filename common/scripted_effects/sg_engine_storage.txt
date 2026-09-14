@@ -44,6 +44,7 @@
 #               Kept per-consumer because the GUI reads it directly for the
 #               "current value" column.
 #   SEG_LIST    list to append the packed line-segment encoding to.
+#   YEAR_LIST   list to append this snapshot's year to, for the x axis.
 #   PREV_Y_VAR  variable remembering the previous snapshot's y. MUST be unique
 #               per consumer: it persists between invocations and is what makes
 #               a segment join the right two points.
@@ -106,10 +107,32 @@
 #     The first snapshot for an object produces NO segment - there is nothing
 #     to connect to yet. N snapshots give N-1 segments.
 #
+# (C) YEAR.    entry = snapshot_index * 10000 + year
+#     One entry per snapshot, so this list is the same length as (A) and one
+#     LONGER than (B). The renderer reads it for the x-axis labels.
+#
+#     THE INDEX TERM IS NOT DECORATION - it is the dedup guard, exactly as in
+#     (A). Bare years would collapse: add_to_variable_list de-duplicates by
+#     value, and several snapshots forced in one sitting all share a year, so a
+#     bare-year list would silently lose every one of them after the first and
+#     the labels would stop lining up with the points.
+#
+#     Decode in the GUI with Modulo_int32( FixedPointToInt( v ), 10000 ) -
+#     that is, radix 10000, which caps the year at 9999. CK3's own timeline
+#     ends far below that, and a total-conversion using five-digit years would
+#     need a bigger radix here.
+#
+#     PER OBJECT, NOT GLOBAL. A single global year list would be cheaper, but
+#     it would be WRONG for any object whose history starts mid-campaign: the
+#     plot's x axis spans THAT OBJECT'S OWN series stretched to fill the plot,
+#     so an object first seen at snapshot 50 still has its first point at
+#     x = 0, and a global list indexed by position would label that point with
+#     snapshot 1's year. Storing per object makes the label follow the point.
+#
 # ---------------------------------------------------------------------------
 # SHARED SCRATCH
 # ---------------------------------------------------------------------------
-# sg_y_scratch / sg_y_now / sg_seg_entry are
+# sg_y_scratch / sg_y_now / sg_seg_entry / sg_year_entry are
 # NOT parameterized. They are written and consumed inside a single invocation
 # on a single scope, so two consumers sharing the names cannot interfere even
 # if they ever track the same object.
@@ -182,4 +205,23 @@ sg_engine_append_point_effect = {
 	}
 
 	set_variable = { name = $PREV_Y_VAR$ value = var:sg_y_now }
+
+	# --- (C) this snapshot's year, tagged with the index so it cannot dedup ---
+	# Appended unconditionally, unlike the segment above: every snapshot gets a
+	# point, so every snapshot gets a year. That keeps this list exactly as long
+	# as PLAIN_LIST and one longer than SEG_LIST, which is the relationship the
+	# renderer's x-axis spacing relies on.
+	set_variable = {
+		name = sg_year_entry
+		value = global_var:sg_snapshot_index
+	}
+	change_variable = { name = sg_year_entry multiply = 10000 }
+	change_variable = {
+		name = sg_year_entry
+		add = global_var:sg_snapshot_year
+	}
+	add_to_variable_list = {
+		name = $YEAR_LIST$
+		target = var:sg_year_entry
+	}
 }
