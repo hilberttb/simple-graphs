@@ -54,7 +54,7 @@ It sits alongside a launcher descriptor `mod/simple-graphs.mod` (not to be confu
 `descriptor.mod` which is included in this repo) that points at it:
 
 ```
-version="0.1"
+version="0.1.0"
 name="Simple Graphs"
 supported_version="1.19.*"
 path="<absolute path to the mod folder>"
@@ -305,7 +305,7 @@ demonstrated on `landed_title` before being backed out.
 
 ---
 
-## Known limitations (in version 0.1)
+## Known limitations (in version 0.1.0)
 
 - **The x axis compresses as snapshots accumulate.** The step auto-fits, so the
   series always fills the 600px plot exactly and can never leave it, however
@@ -344,8 +344,7 @@ MIT. See `LICENSE`.
 
 ## Contributing
 
-You can inform me of issues, requests, etc. by commenting on the Steam Workshop or
-Paradox Plaza. I'd rather not get private messages about this mod, unless it's urgent.
+You can inform me of issues, requests, etc. by commenting on the Steam Workshop. I'd rather not get private messages about this mod, unless it's urgent.
 You can also contribute by forking this repo and creating a PR, if you are comfortable with GitHub.
 Within the terms of the License, you may use this mod's code for your own mod or an alternative to this one.
 That means you can use the code with no restrictions, but I ask you to credit me if you do.
