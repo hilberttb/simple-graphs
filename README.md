@@ -1,4 +1,6 @@
 # Simple Graphs
+**Version: 0.1.0**  
+Date: 9/15/2026
 
 A work-in-progress Crusader Kings III mod that records how many counties belong to each faith and
 each culture, once a year, and draws the result as a connected line graph in its
@@ -7,7 +9,7 @@ own window.
 There is no vanilla or mod precedent (as far as I could find) in CK3 for rendering a numeric time series.
 This builds one out of the primitives the engine happens to expose.
 
-**Status:** This is a PROOF OF CONCEPT, not a fully working mod yet.
+**Status:** This is primarily a proof of concept. It is usable in-game but not polished.
 Data collection, the picker and the plot all function.
 The presentation is deliberately plain so far. Multiple graphs
 in one window, real axes, and colors will be present in the full version.
@@ -30,21 +32,25 @@ engine property, not a bug in the mod. If I find a different way, I will impleme
 
 ## Installing
 
-The mod IS NOT YET available on the **Steam Workshop** and **Paradox Plaza**.
-It will be uploaded in the coming days.
+The mod is available on the **Steam Workshop** and **GitHub**.
 
-Do not mix different installing types. Always remove (i.e. unsubscribe) the previously
-installed version before getting it another way.
+Do not mix different installing types. Always remove (i.e. unsubscribe or delete)
+the previously installed version before getting it another way.
 
 The instructions below are for a manual install using this GitHub repo.
 
-The repository is the mod folder. It belongs at:
+The mod folder belongs at:
 
 ```
 Documents/Paradox Interactive/Crusader Kings III/mod/simple-graphs/
 ```
 
-alongside a launcher descriptor `mod/simple-graphs.mod` (not to be confused with
+The GitHub repository may also carry development material (design notes, verification
+scripts, log dumps) that the game ignores, so cloning it straight to that path
+works. `build-workshop.ps1` writes the same folder containing only the files
+the mod actually needs.
+
+It sits alongside a launcher descriptor `mod/simple-graphs.mod` (not to be confused with
 `descriptor.mod` which is included in this repo) that points at it:
 
 ```
@@ -304,7 +310,7 @@ demonstrated on `landed_title` before being backed out.
 - **The x axis compresses as snapshots accumulate.** The step auto-fits, so the
   series always fills the 600px plot exactly and can never leave it, however
   many snapshots there are. The trade is that spacing is not comparable between
-  two objects with different history lengths. A horizontal scrollbar is not
+  two objects with different history lengths. A horizontal scrollbar is
   planned, but my current attempts have failed.
 - **The picker needs a played character** (Observer mode, above).
 - **History lists grow forever.** One entry per faith and per culture per
@@ -334,6 +340,8 @@ demonstrated on `landed_title` before being backed out.
 
 MIT. See `LICENSE`.
 
+---
+
 ## Contributing
 
 You can inform me of issues, requests, etc. by commenting on the Steam Workshop or
@@ -341,3 +349,9 @@ Paradox Plaza. I'd rather not get private messages about this mod, unless it's u
 You can also contribute by forking this repo and creating a PR, if you are comfortable with GitHub.
 Within the terms of the License, you may use this mod's code for your own mod or an alternative to this one.
 That means you can use the code with no restrictions, but I ask you to credit me if you do.
+
+---
+
+## AI Disclosure
+
+Developed with help from Claude Code for scripting and game-file research.

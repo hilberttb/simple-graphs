@@ -10,3 +10,6 @@ verify_snapshot_totals.py
 check_sg_rules.py
 README_FIX_AND_RENAME.md
 DOCUMENTATION.md
+debug_and_error_dump
+debug_and_error_dump_2
+debug_and_error_dump_3
