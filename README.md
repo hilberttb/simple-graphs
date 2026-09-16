@@ -32,7 +32,8 @@ engine property, not a bug in the mod. If I find a different way, I will impleme
 
 ## Installing
 
-The mod is available on the **Steam Workshop** and **GitHub**.
+The mod is available on the **Steam Workshop** and **GitHub**.  
+Steam Workshop Page: https://steamcommunity.com/sharedfiles/filedetails/?id=3802432178
 
 Do not mix different installing types. Always remove (i.e. unsubscribe or delete)
 the previously installed version before getting it another way.
