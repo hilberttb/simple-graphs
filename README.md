@@ -66,7 +66,9 @@ That `.mod` file lives outside the repository and is not tracked here. Enable
 2. Click it to open the window; click it again, or **Close**, to dismiss it.
    The window is draggable.
 3. The right-hand column lists every faith and every culture that has ever held
-   at least one county. Click any row to plot it.
+   at least one county. Click any row to plot it. Faiths sit under a header for
+   their **religion**, cultures under a header for their **heritage**, the way
+   the ruler designer groups its own two lists.
 4. The left-hand column shows the selected series: its name, the plot, counters,
    and two number tables that decode the stored data with the same expressions
    the line itself uses.
@@ -115,6 +117,7 @@ Per faith and per culture object, persisted in the savegame:
 | `sg_faithculture_running_count` | Scratch counter for the counting pass |
 | `sg_faithculture_encoded` | Legacy `base + count` value, now only feeding a debug line |
 | `sg_faithculture_ever_tracked` | Sticky "has held a county" marker, gates the picker |
+| `sg_faithculture_group_members` | Variable list, on a **religion** or a delegate culture: that group's picker rows |
 
 Globals:
 
@@ -125,6 +128,9 @@ Globals:
 | `sg_snapshot_year` | The ingame year of the snapshot currently being taken |
 | `sg_faith_registry` / `sg_culture_registry` | Lists of faith/culture **scopes**, rebuilt each snapshot |
 | `sg_faith_registry_count` / `sg_culture_registry_count` | Sizes, for the debug line |
+| `sg_religion_registry` | The religions holding at least one tracked faith — one picker header each |
+| `sg_heritage_registry` | One **culture** per distinct heritage, standing in for it — see below |
+| `sg_religion_registry_count` / `sg_heritage_registry_count` | Sizes, for the debug line |
 | `sg_selected_faith` / `sg_selected_culture` | The current selection. Exactly one is ever set |
 
 Entries are **not** raw counts. `add_to_variable_list` de-duplicates by value, so
@@ -268,6 +274,25 @@ against the largest value the metric can reach — if `value * Y_SCALE` exceeds
 `Y_MAX`, the clamp pins every such object to the same y and silently merges
 distinct series onto the top edge.
 
+Two further engine effects, `sg_engine_clear_group_registry_effect` and
+`sg_engine_register_group_member_effect`, give a picker one level of grouping:
+a global list whose entries are **group** objects, plus a per-group variable
+list of that group's **members**, which the GUI walks as a datamodel inside a
+datamodel. Both are type-free. Working out *which* group a member belongs to
+stays with the consumer, because that is the part that cannot be written
+without naming a type — and the two sides of this consumer show how differently
+that can go:
+
+- **Faiths** get their group from a plain scope link, `religion`.
+- **Cultures** have no such link. Nothing in 1.19 reaches a culture's heritage
+  as a scope: `culture_pillar` takes a literal key, `has_cultural_pillar` takes
+  a literal name, and no trigger on a pillar scope identifies it as a heritage.
+  The one thing script *can* do is compare two cultures with
+  `has_same_culture_heritage`. So `sg_heritage_registry` holds a **delegate** —
+  the first tracked culture found carrying a given heritage, standing in for it
+  — and the window names the heritage with `Culture.GetHeritage`, the hop that
+  exists on the GUI side but not in script.
+
 The storage layer works on any of the 57 CK3 object types that declare
 `.MakeScope`, with no new engine support and nothing to verify per type. This was
 demonstrated on `landed_title` before being backed out.
@@ -284,14 +309,23 @@ demonstrated on `landed_title` before being backed out.
 - **The picker needs a played character** (Observer mode, above).
 - **History lists grow forever.** One entry per faith and per culture per
   snapshot, persisted in every save. Retention capping is not built.
-- **Picker rows are in iteration order** — faiths grouped by religion, cultures
-  in a flat sweep. Stable, but unrelated to county count or name. CK3 datamodels
-  have no sort, so any other ordering has to be produced script-side.
-  A better sorting mechanism is planned.
+- **Picker rows are grouped but not sorted.** Faiths sit under their religion
+  and cultures under their heritage, but within a group, and between groups,
+  rows are still in registry insertion order — unrelated to county count or
+  name. CK3 datamodels have no sort, so any real ordering has to be produced
+  script-side. Grouping is as far as this goes for now.
+- **The groups do not collapse.** Vanilla's collapsible list widgets
+  (`CollapsibleReligionList`, `CollapsibleCultureList`) are reachable only
+  through `RulerDesignerWindow`, which a mod cannot instantiate, so a
+  collapsible picker would need a different mechanism than the one the ruler
+  designer uses. Not built.
 - **A faith or culture that has never held a county never appears** in the
   picker. Collection is unaffected. Everything is still recorded.
-- **There is an x axis of ingame years, but no y axis**, and no legend or
-  color. One series at a time, so far by design.
+- **There is an x axis of ingame years, but still no y axis** - only two y
+  labels, giving the county count at the first and the last snapshot of the
+  selected series, placed at the height of those two points. No ticks, no
+  gridlines, no scale in between.
+- **No legend or color.** One series at a time, so far by design.
 - **Performance in a late game is unverified (see more in the performance section).**
 
 ---

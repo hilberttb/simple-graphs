@@ -18,7 +18,7 @@
  sg_c_fc_debug_culture:0 "SIMPLE_GRAPHS CULTURE [THIS.Culture.GetNameNoTooltip] counties=[THIS.Var('sg_faithculture_running_count').GetValue] enc=[THIS.Var('sg_faithculture_encoded').GetValue]"
  sg_c_fc_debug_click_faith:0 "SIMPLE_GRAPHS_CLICK faith [THIS.Faith.GetNameNoTooltip] selected"
  sg_c_fc_debug_click_culture:0 "SIMPLE_GRAPHS_CLICK culture [THIS.Culture.GetNameNoTooltip] selected"
- sg_c_fc_debug_registry:0 "SIMPLE_GRAPHS_REGISTRY faiths=[GetGlobalVariable('sg_faith_registry_count').GetValue] cultures=[GetGlobalVariable('sg_culture_registry_count').GetValue]"
+ sg_c_fc_debug_registry:0 "SIMPLE_GRAPHS_REGISTRY faiths=[GetGlobalVariable('sg_faith_registry_count').GetValue] cultures=[GetGlobalVariable('sg_culture_registry_count').GetValue] religions=[GetGlobalVariable('sg_religion_registry_count').GetValue] heritages=[GetGlobalVariable('sg_heritage_registry_count').GetValue]"
 
 # ---- window chrome ----------------------------------------------------------
  SG_C_FC_OPEN_BUTTON:0 "County graph"
@@ -31,8 +31,36 @@
  SG_C_FC_LBL_PICKER:0 "PICK ONE - click any row to plot it"
  SG_C_FC_LBL_FAITHCOUNT:0 "faiths:"
  SG_C_FC_LBL_CULTCOUNT:0 "cultures:"
- SG_C_FC_LBL_FAITHCOLS:0 "FAITHS - click a row. name / counties / pts / seg"
- SG_C_FC_LBL_CULTCOLS:0 "CULTURES - click a row. name / counties / pts / seg"
+ SG_C_FC_LBL_FAITHCOLS:0 "FAITHS, grouped by religion - click a row. name / counties / pts / seg"
+ SG_C_FC_LBL_CULTCOLS:0 "CULTURES, grouped by heritage - click a row. name / counties / pts / seg"
+
+# The two group headers. Each is read in the scope of the GROUP OBJECT that the
+# outer datamodel handed the row, which is not the same kind of object on both
+# sides and is the reason these are two keys rather than one:
+#
+#   faiths     the group object IS the religion, reached from a faith by the
+#              `religion` scope link, so the header just names it.
+#   cultures   there is no culture -> heritage scope link in script, so the
+#              group object is a DELEGATE CULTURE standing in for its heritage
+#              (see sg_c_faithculture_collect.txt). The window does the hop
+#              script cannot, with datacontext = "[Scope.Culture.GetHeritage]",
+#              so by the time this key is read the scope is already the
+#              heritage PILLAR and the delegate is out of the picture. Every
+#              member of the group shares that heritage, so reading it off the
+#              delegate is exact, not a guess.
+#
+# Both are vanilla keys, copied verbatim from
+# game/localization/english/gui/faith_view_l_english.yml:
+#   RULER_DESIGNER_CULTURE_PILLAR_NAME  line 21  [CulturePillar.GetNameNoTooltip]
+#   RULER_DESIGNER_RELIGION             line 25  [Religion.GetNameNoTooltip]
+# The same file's line 17 shows the Culture.GetHeritage.GetNameNoTooltip chain
+# that the window performs one step earlier.
+#
+# NoTooltip on both: a header is not a click target here, and the plain
+# GetName variants embed a tooltip hook that would fight the row tooltips
+# underneath them.
+ SG_C_FC_HDR_RELIGION:0 "[Religion.GetNameNoTooltip]"
+ SG_C_FC_HDR_HERITAGE:0 "[CulturePillar.GetNameNoTooltip]"
 
 # ---- the plot ---------------------------------------------------------------
 # Bound to whichever faith or culture was last clicked in the picker.

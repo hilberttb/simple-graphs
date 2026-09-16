@@ -150,3 +150,147 @@ sg_engine_register_object_effect = {
 		}
 	}
 }
+
+###############################################################################
+# GROUPED REGISTRIES
+#
+# A flat registry answers "which objects exist". It does not answer "which
+# objects belong together", and a picker listing a few hundred rows in raw
+# iteration order is the readability problem those two effects exist to fix.
+#
+# The shape is one level of nesting and nothing more:
+#
+#   <group registry>          a global list whose entries are GROUP objects
+#   <member list>             a per-group variable list, living ON the group
+#                             object, whose entries are that group's MEMBERS
+#
+# and the GUI walks it as a datamodel inside a datamodel:
+#
+#   outer  datamodel = "[GetGlobalList( '<group registry>' )]"
+#   inner  datamodel = "[<Type>.MakeScope.GetList( '<member list>' )]"
+#
+# Both halves are mechanisms this mod already ships and has verified in-game -
+# the outer is exactly what sg_engine_register_object_effect feeds today, and
+# the inner is the same Scope.GetList read-back (data_types_script.txt:3429)
+# that every plot expression in the window already uses. Nothing new is being
+# assumed about the engine; this is the existing registry pattern applied once
+# more, one level down.
+#
+# WHY THE MEMBER LIST LIVES ON THE GROUP OBJECT
+# ---------------------------------------------
+# Script cannot build a variable name at runtime, so "one global list per
+# group" is impossible - the same constraint that produced the registry
+# pattern in the first place. Hanging the list off the group object sidesteps
+# it completely: every group uses the SAME list name, because each one is a
+# different object's variable.
+#
+# WHY MEMBERSHIP IS STORED RATHER THAN QUERIED IN THE GUI
+# -------------------------------------------------------
+# For some types the GUI can already enumerate a group's members on its own.
+# Doing it that way would list EVERY member, including the ones this mod has
+# never tracked, and a datamodel cannot be filtered - only each row's `visible`
+# can, which leaves the group header showing above an empty body whenever a
+# group has no tracked members at all.
+#
+# Storing the membership makes the filter structural instead: a group is only
+# ever registered when it has a member to register, and a member list only ever
+# contains members that passed the caller's own filter. The GUI then renders
+# what it is given, with no visibility arithmetic anywhere.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_clear_group_registry_effect
+# ---------------------------------------------------------------------------
+#   sg_engine_clear_group_registry_effect = {
+#       REGISTRY    = <global list name>
+#       MEMBER_LIST = <per-group variable list name>
+#   }
+#
+# Called in scope none, once per snapshot, BEFORE anything registers. Empties
+# every member list belonging to a currently-registered group and then empties
+# the registry itself, so both are rebuilt from scratch.
+#
+# ORDER IS LOAD-BEARING: the member lists have to be cleared while the registry
+# still names their owners. Clearing the registry first would strand every one
+# of them, and a stale member list is not harmless - it would show last
+# snapshot's membership under this snapshot's headers.
+#
+# Rebuilding rather than appending is what makes objects created mid-campaign
+# appear by themselves, for exactly the reason the flat registry is rebuilt
+# too, and it makes de-duplication moot for the member lists.
+#
+# Both clears are guarded, matching the guard style of the flat registry's own
+# clear sites: on the first snapshot neither list has ever existed, and whether
+# clearing a never-created list is a silent no-op or an error.log line is not
+# something this project has verified.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_register_group_member_effect
+# ---------------------------------------------------------------------------
+#   sg_engine_register_group_member_effect = {
+#       REGISTRY    = <global list name>
+#       MEMBER_LIST = <per-group variable list name>
+#       MEMBER      = <a saved scope name>
+#   }
+#
+# CALLED IN THE SCOPE OF THE GROUP OBJECT, not of the member. The member
+# arrives as a saved scope because the two are different objects and only one
+# of them can be `this`.
+#
+# Finding which group a member belongs to is the CALLER's job, and it has to
+# be: it is the one part of this that cannot be written without naming a type.
+# Some callers get the group from a scope link, others have to search the
+# registry for it. By the time this effect runs, that question is answered and
+# what is left is pure bookkeeping.
+#
+# The registry add is guarded by is_target_in_global_variable_list
+# (vanilla: common/achievements/fp1_achievements.txt:6-9) because this effect
+# is called once per MEMBER, so the second and every later member of a group
+# would otherwise re-register the group it already registered. The member add
+# is deliberately NOT guarded: a caller that hands the same member twice has a
+# bug in its own iteration, and silently absorbing that would hide it.
+###############################################################################
+
+sg_engine_clear_group_registry_effect = {
+
+	if = {
+		limit = { has_global_variable_list = $REGISTRY$ }
+
+		every_in_global_list = {
+			variable = $REGISTRY$
+			if = {
+				limit = { has_variable_list = $MEMBER_LIST$ }
+				clear_variable_list = $MEMBER_LIST$
+			}
+		}
+
+		clear_global_variable_list = $REGISTRY$
+	}
+}
+
+sg_engine_register_group_member_effect = {
+
+	save_scope_as = sg_group_obj
+
+	if = {
+		limit = {
+			OR = {
+				NOT = { has_global_variable_list = $REGISTRY$ }
+				NOT = {
+					is_target_in_global_variable_list = {
+						name = $REGISTRY$
+						target = scope:sg_group_obj
+					}
+				}
+			}
+		}
+		add_to_global_variable_list = {
+			name = $REGISTRY$
+			target = scope:sg_group_obj
+		}
+	}
+
+	add_to_variable_list = {
+		name = $MEMBER_LIST$
+		target = scope:$MEMBER$
+	}
+}

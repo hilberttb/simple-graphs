@@ -77,6 +77,27 @@ sg_c_faithculture_snapshot_effect = {
 		clear_global_variable_list = sg_culture_registry
 	}
 
+	# ADDED (grouped picker): the same wipe for the two GROUPED registries that
+	# give the picker its headers - religions holding tracked faiths, and
+	# heritages holding tracked cultures. Same rebuild-don't-append reasoning as
+	# the two flat registries above, and the guarding is inside the engine
+	# effect rather than here. See sg_engine_snapshot.txt for the shape.
+	#
+	# MEMBER_LIST is the same name on both sides for the same reason PREV_Y_VAR
+	# and MARKER_VAR are shared further down: the two calls write to DISJOINT
+	# SETS OF OBJECTS. A member list is a per-object variable list, and these
+	# two live on different kinds of object - the faith branch hangs its lists
+	# off RELIGIONS, the culture branch off the delegate cultures chosen below.
+	# No object is both a religion and a culture, so the name cannot collide.
+	sg_engine_clear_group_registry_effect = {
+		REGISTRY    = sg_religion_registry
+		MEMBER_LIST = sg_faithculture_group_members
+	}
+	sg_engine_clear_group_registry_effect = {
+		REGISTRY    = sg_heritage_registry
+		MEMBER_LIST = sg_faithculture_group_members
+	}
+
 	# --- Step 1: zero the running counter on every faith and every culture ---
 	# Done first so that faiths/cultures created mid-campaign (reformations,
 	# hybrid cultures) have the variable defined before we change_variable it.
@@ -209,6 +230,42 @@ sg_c_faithculture_snapshot_effect = {
 				MARKER_VAR = sg_faithculture_ever_tracked
 			}
 
+			# ADDED (grouped picker): file this faith under its RELIGION, so the
+			# picker can print a "Christianity" header above the Catholics and
+			# the Orthodox instead of running all several hundred faiths
+			# together in one undifferentiated column.
+			#
+			# The group is reached by a plain scope link - `religion`, "Get
+			# religion of scoped faith, character, province, title or great holy
+			# war", Input Scopes includes faith (event_targets.log:1755-1757).
+			# That is the easy case; the culture branch below has no equivalent
+			# and has to work for it.
+			#
+			# Gated on the SAME sticky marker sg_engine_register_object_effect
+			# gates the flat registry on, and that is the whole filter: a faith
+			# that has never held a map county is never a member, so a religion
+			# with no tracked faiths never gets registered and never prints a
+			# header. No empty groups by construction. Reading the marker here
+			# rather than the live count is what keeps a faith that has dropped
+			# back to zero listed under its religion instead of vanishing from
+			# the picker mid-campaign.
+			#
+			# `this` as the target rather than a save_scope_as: the engine effect
+			# takes the member as a SAVED SCOPE NAME because it runs in the
+			# group's scope, where `this` is the religion. So the faith has to be
+			# saved before the hop.
+			if = {
+				limit = { has_variable = sg_faithculture_ever_tracked }
+				save_scope_as = sg_fc_group_member
+				religion = {
+					sg_engine_register_group_member_effect = {
+						REGISTRY    = sg_religion_registry
+						MEMBER_LIST = sg_faithculture_group_members
+						MEMBER      = sg_fc_group_member
+					}
+				}
+			}
+
 			set_variable = { name = sg_faithculture_running_count value = 0 }
 		}
 	}
@@ -249,6 +306,109 @@ sg_c_faithculture_snapshot_effect = {
 			MARKER_VAR = sg_faithculture_ever_tracked
 		}
 
+		# ADDED (grouped picker): file this culture under its HERITAGE, so the
+		# picker can print a "Central Germanic" header the way the ruler
+		# designer's culture list does.
+		#
+		# -------------------------------------------------------------------
+		# THE DELEGATE TRICK, AND WHY IT IS NEEDED
+		# -------------------------------------------------------------------
+		# The faith branch above just says `religion = { ... }`. THERE IS NO
+		# SUCH LINK HERE. A heritage is a culture_pillar, and searching the
+		# 1.19 script docs for a way from a culture to its own pillar as a
+		# SCOPE turns up nothing:
+		#   - event_targets.log has exactly one culture_pillar producer,
+		#     `culture_pillar` at line 88, and it is a GLOBAL link that takes a
+		#     literal key ("Get the culture_pillar with the specified key").
+		#     Script cannot build a key at runtime, so it is no use here.
+		#   - triggers.log has `has_cultural_pillar = name` (line 11450), which
+		#     again takes a name, not a scope, and answers a yes/no question
+		#     rather than handing anything back.
+		#   - every_culture_pillar (effects.log:713) iterates the whole pillar
+		#     database, but nothing on a pillar scope tests "is this one a
+		#     heritage", so the iteration cannot be narrowed to the pillars
+		#     wanted here.
+		# The one thing script CAN do is compare two cultures:
+		#   has_same_culture_heritage - "Does the culture have the same
+		#   heritage as the target?", Supported Scopes: culture, Supported
+		#   Targets: culture  (triggers.log:11502-11505)
+		#
+		# So the group object is not the heritage at all. It is a DELEGATE: the
+		# first tracked culture found carrying a given heritage, standing in for
+		# it. sg_heritage_registry holds one culture per distinct heritage, and
+		# each delegate's member list holds every tracked culture sharing that
+		# heritage - including the delegate itself, which is registered on the
+		# same pass and so needs no special case.
+		#
+		# The heritage is then named on the GUI side, where the link script
+		# lacks does exist, and is vanilla-proven:
+		#     CULTURE_HERITAGE_NAME_RULER_DESIGNER:
+		#         "[Culture.GetHeritage.GetNameNoTooltip]"
+		#     - game/localization/english/gui/faith_view_l_english.yml:17
+		# Any member of the group answers it, so the delegate answers it.
+		#
+		# WHICH culture becomes the delegate is not stable between snapshots -
+		# it is whichever every_culture_global reaches first, and that can
+		# change when a hybrid culture is created. It does not matter: the
+		# delegate is never shown as a delegate, only used to read a heritage
+		# name that every member of the group shares by definition.
+		#
+		# Gated on the same sticky marker as the faith branch, for the same
+		# reason, with the same consequence: no empty heritage headers.
+		if = {
+			limit = { has_variable = sg_faithculture_ever_tracked }
+			save_scope_as = sg_fc_group_member
+
+			# Step 1: make sure this heritage HAS a delegate. If no registered
+			# culture shares this one's heritage, this culture becomes the
+			# delegate - and registers itself as the group's first member in
+			# the same call, because the engine effect run in a culture's own
+			# scope with itself as MEMBER does exactly that.
+			#
+			# The OR guards the first tracked culture of the first snapshot,
+			# when the registry has never been created and iterating it is
+			# unverified - the same defensive shape as the list clears above.
+			# any_in_global_list takes `variable = name` (triggers.log:293) and
+			# vanilla runs it over a global list of CULTURES in exactly this
+			# form, common/casus_belli_types/00_conquest.txt:570-573.
+			if = {
+				limit = {
+					OR = {
+						NOT = { has_global_variable_list = sg_heritage_registry }
+						NOT = {
+							any_in_global_list = {
+								variable = sg_heritage_registry
+								has_same_culture_heritage = scope:sg_fc_group_member
+							}
+						}
+					}
+				}
+				sg_engine_register_group_member_effect = {
+					REGISTRY    = sg_heritage_registry
+					MEMBER_LIST = sg_faithculture_group_members
+					MEMBER      = sg_fc_group_member
+				}
+			}
+			else = {
+				# Step 2: a delegate already exists, so join it. random_ rather
+				# than every_ because the limit matches exactly one entry -
+				# step 1 guarantees at least one, and the registry can never
+				# hold two cultures of the same heritage, since the second one
+				# would have taken this branch instead of creating a delegate.
+				# every_ would be equivalent and slower to read; there is
+				# nothing random about a one-element match.
+				random_in_global_list = {
+					variable = sg_heritage_registry
+					limit = { has_same_culture_heritage = scope:sg_fc_group_member }
+					sg_engine_register_group_member_effect = {
+						REGISTRY    = sg_heritage_registry
+						MEMBER_LIST = sg_faithculture_group_members
+						MEMBER      = sg_fc_group_member
+					}
+				}
+			}
+		}
+
 		set_variable = { name = sg_faithculture_running_count value = 0 }
 	}
 
@@ -274,6 +434,29 @@ sg_c_faithculture_snapshot_effect = {
 		every_in_global_list = {
 			variable = sg_culture_registry
 			change_global_variable = { name = sg_culture_registry_count add = 1 }
+		}
+	}
+
+	# ADDED (grouped picker): the same count for the two GROUP registries, so
+	# the grouping can be sanity-checked from debug.log without opening the
+	# window. These are the numbers of HEADERS the picker will draw, and the
+	# useful check is that each is well under its flat counterpart and greater
+	# than zero: equal to it would mean every group came out with one member,
+	# which is what a broken group test looks like.
+	set_global_variable = { name = sg_religion_registry_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = sg_religion_registry }
+		every_in_global_list = {
+			variable = sg_religion_registry
+			change_global_variable = { name = sg_religion_registry_count add = 1 }
+		}
+	}
+	set_global_variable = { name = sg_heritage_registry_count value = 0 }
+	if = {
+		limit = { has_global_variable_list = sg_heritage_registry }
+		every_in_global_list = {
+			variable = sg_heritage_registry
+			change_global_variable = { name = sg_heritage_registry_count add = 1 }
 		}
 	}
 	debug_log = sg_c_fc_debug_registry
