@@ -1,15 +1,13 @@
-GUI_RESEARCH.md
-README_DATA_COLLECTION.md
-README_LINE_GRAPH_PROTOTYPE.md
-README_FAITH_CULTURE_ENUMERATION.md
-Screenshot 2026-09-13 123133.png
-README_SELECTOR.md
+# Folders
 screenshots/
-README_GENERICITY_INVESTIGATION.md
+README_dump/
+debug_and_error_dump_collection/
+
+# Files
 verify_snapshot_totals.py
 check_sg_rules.py
-README_FIX_AND_RENAME.md
+
 DOCUMENTATION.md
-debug_and_error_dump
-debug_and_error_dump_2
-debug_and_error_dump_3
+TODO.md
+AGENTS.md
+CLAUDE.md
