@@ -1,6 +1,6 @@
 # Simple Graphs
-**Version: 0.2.0** (Work In Progress) 
-Date: 9/15/2026
+**Version: 0.2.0**  
+Date: 9/24/2026
 
 A work-in-progress Crusader Kings III mod that records how many counties belong to each faith and
 each culture, once a year, and draws the result as a connected line graph in its
@@ -23,7 +23,7 @@ y scale, and more than one series on screen at once.
 
 | | |
 |---|---|
-| Game version | CK3 1.19.* (Scribe) - `supported_version` in `descriptor.mod` - I have not tested this mod with any other CK3 version. It might work, or it might not. |
+| Game version | CK3 1.19.* (Scribe) - `supported_version` in `descriptor.mod`. I have not tested this mod with any other CK3 version. It might work, or it might not. |
 | Debug mode | Only needed for the console commands and the `debug.log` output |
 | Other mods | Touches no vanilla file. Adds its window through the `gui/scripted_widgets/` hook. I don't think it will conflict with other mods, but I have not verified that yet. |
 
@@ -35,8 +35,10 @@ engine property, not a bug in the mod. If I find a different way, I will impleme
 
 ## Installing
 
-The mod is available on the **Steam Workshop** and **GitHub**.  
-Steam Workshop Page: https://steamcommunity.com/sharedfiles/filedetails/?id=3802432178
+The mod is available on the **Steam Workshop**, **Paradox Mods**, and **GitHub**.  
+- Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3802432178
+- Paradox Mods: 
+- GitHub Releases: https://github.com/hilberttb/simple-graphs/releases
 
 Do not mix different installing types. Always remove (i.e. unsubscribe or delete)
 the previously installed version before getting it another way.
@@ -66,6 +68,39 @@ path="<absolute path to the mod folder>"
 
 That `.mod` file lives outside the repository and is not tracked here. Enable
 "Simple Graphs" in the launcher's playset.
+
+---
+
+## Existing saves
+
+### Adding the mod to a campaign already in progress
+
+This should work. The snapshot clock is started by a game-start hook and then
+re-arms itself once a year from inside the save, so it does not need the mod to
+have been present from day one.
+
+**It cannot recover the years that have already passed.** The mod counts
+counties as they are at the moment a snapshot fires; there is nothing in the
+save for it to reconstruct earlier years from. A campaign you add it to in 1150
+starts its history in 1150, and since a line needs **two** snapshots, you will
+need a year of play before anything is drawn.
+
+I have not actually tested this, so treat "should work" as exactly that. If it
+does not start on its own, forcing one snapshot from the console in debug mode
+(`effect sg_snapshot_collect_effect = yes`) starts the chain, and it re-arms
+from there.
+
+### Updating the mod on a save that already uses it
+
+Safe. Updating does not disturb the data already recorded: the stored lists are
+only ever appended to, and no update rewrites, reorders or deletes what is in
+them. A campaign's history survives across mod versions intact.
+
+What an update *can* do is add new things alongside it. 0.2.0 is an example.
+It gives every tracked faith and culture a colour, and an older save simply picks
+those up on its next snapshot rather than the moment it loads. So a save carried
+forward may be missing a new feature for up to one in-game year, and then have
+it permanently.
 
 ---
 
@@ -102,9 +137,9 @@ correctly starts its line where it started existing.
 ### Colours
 
 Each faith and culture plots in its own colour, the one the game gives it on the
-map. CK3 does not expose that colour to a mod at runtime - nothing on `Faith`,
+map. CK3 does not expose that colour to a mod at runtime, nothing on `Faith`,
 `Culture`, `Religion` or any related type returns one, and no effect or trigger
-reads one - so the mod ships a table generated from the game's own
+reads one, so the mod ships a table generated from the game's own
 `religion_types/` and `cultures/` files: 140 faiths and 244 cultures.
 
 Two consequences worth knowing:
@@ -112,8 +147,8 @@ Two consequences worth knowing:
 - **The colours are darkened.** Map colours are picked to be told apart as large
   filled areas, and over half of them are lighter than the paper the graph is
   drawn on. Each is scaled down until it is clearly darker than the sheet. Hue
-  and saturation are untouched, so it is the same colour, darker.
-- **Anything the table cannot know gets a palette colour instead** - a faith
+  and saturation are untouched, so it is the same colour, just darker.
+- **Anything the table cannot know gets a palette colour instead.** a faith
   reformed during the campaign, a hybrid or divergent culture, or anything added
   by another mod. Twelve colours, handed out in order and then remembered, so an
   object keeps its colour for the rest of that campaign.
@@ -148,8 +183,8 @@ The savegame holds every entry in plain text if that level of detail is needed.
 This replaces the debug readouts the window used to carry, which are parked in
 `sg_debug_widgets.gui.bak` until they come back behind a debug-mode check.
 
-A burst helper exists for stress testing but is development scaffolding and is
-gitignored, so it may not be present in a checkout:
+A burst helper also exists, for stress testing. It is development scaffolding
+rather than a feature, but it does ship:
 
 ```
 effect sg_dev_burst_effect = { COUNT = 25 }     # COUNT is the custom amount of snapshots
@@ -383,7 +418,7 @@ demonstrated on `landed_title` before being backed out.
   snapshot, persisted in every save. Retention capping is not built.
 - **Picker rows are grouped but not sorted.** Faiths sit under their religion
   and cultures under their heritage, but within a group, and between groups,
-  rows are still in registry insertion order — unrelated to county count or
+  rows are still in registry insertion order. Unrelated to county count or
   name. CK3 datamodels have no sort, so any real ordering has to be produced
   script-side. Grouping is as far as this goes for now.
 - **The groups do not collapse.** Vanilla's collapsible list widgets

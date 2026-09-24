@@ -848,8 +848,6 @@ window = {
 			}
 		}
 	}
-	### END TEMPORARY DIAGNOSTIC ###############################################
-
 	### THE CURRENT SELECTION ##################################################
 	# Moved here from above the plot, where it read "SHOWING: Catholicism". The
 	# left half is a sheet carrying nothing but the graph now, so the one piece of

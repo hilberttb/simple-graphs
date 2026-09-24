@@ -41,8 +41,8 @@
 # to a number table now parked in sg_debug_widgets.gui.bak. Both are kept because
 # the debug readouts are meant to come back behind a debug-mode check, and an
 # unused loc key costs nothing - CK3 only complains about the reverse.
- SG_C_FC_OPEN_BUTTON:0 "County graph"
- SG_C_FC_WINDOW_TITLE:0 "Simple Graphs - county count over time"
+ SG_C_FC_OPEN_BUTTON:0 "Simple graphs"
+ SG_C_FC_WINDOW_TITLE:0 "Simple Graphs"
  SG_C_FC_LBL_PLAINCOLS:0 "idx / stored value / counties"
 
 # ---- the picker -------------------------------------------------------------
@@ -51,7 +51,7 @@
 # SG_C_FC_LBL_PICKER, SG_C_FC_LBL_FAITHCOUNT and SG_C_FC_LBL_CULTCOUNT are also
 # no longer read - the picker column lost its heading and its two counters, and
 # starts straight in on the list under the current selection's name.
- SG_C_FC_LBL_PICKER:0 "PICK ONE - click any row to plot it"
+ SG_C_FC_LBL_PICKER:0 "PICK ONE"
  SG_C_FC_LBL_FAITHCOUNT:0 "faiths:"
  SG_C_FC_LBL_CULTCOUNT:0 "cultures:"
  SG_C_FC_LBL_FAITHCOLS:0 "FAITHS"
@@ -99,6 +99,8 @@
  SG_C_FC_TT_CLICK:0 "Click to plot this one."
  SG_C_FC_LBL_OBSERVER:0 "Observer mode. Picking a series needs a played character."
 
-# TEMPORARY, paired with the diagnostic block in the window. Delete both
-# together once the series colour is confirmed working.
+# Read by the colour diagnostic row, which now lives in sg_debug_widgets.gui.bak
+# rather than in the window. It did its job: showing the three stored channels
+# as text beside an icon swatch drawn from them is what proved a `line` accepts
+# a databound colour. Kept for when the debug readouts return.
  SG_C_FC_LBL_COLORDBG:0 "colour r/g/b:"
