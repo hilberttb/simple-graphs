@@ -35,9 +35,8 @@ engine property, not a bug in the mod. If I find a different way, I will impleme
 
 ## Installing
 
-The mod is available on the **Steam Workshop**, **Paradox Mods**, and **GitHub**.  
+The mod is available on the **Steam Workshop** and **GitHub**.  
 - Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3802432178
-- Paradox Mods: 
 - GitHub Releases: https://github.com/hilberttb/simple-graphs/releases
 
 Do not mix different installing types. Always remove (i.e. unsubscribe or delete)
