@@ -1,5 +1,5 @@
 # Simple Graphs
-**Version: 0.1.0**  
+**Version: 0.2.0** (Work In Progress) 
 Date: 9/15/2026
 
 A work-in-progress Crusader Kings III mod that records how many counties belong to each faith and

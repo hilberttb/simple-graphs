@@ -1,0 +1,132 @@
+﻿###############################################################################
+# Simple Graphs - ENGINE: the fallback colour palette.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+# Nothing below knows what kind of object it is colouring. It is handed three
+# variable names and a scope, and it writes three numbers.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS IS THE FALLBACK *FOR*
+# ---------------------------------------------------------------------------
+# A consumer may know an authored colour for some of its objects. It cannot
+# know one for all of them: objects created during a campaign do not exist when
+# a table is generated, and objects added by other mods are not in it either.
+#
+# So a consumer stamps what it knows first, and then calls this for everything.
+# The guard below makes that order work without the caller having to think
+# about it - an object that already has a colour is left exactly as it is, and
+# this only ever fills gaps.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_assign_fallback_color_effect
+# ---------------------------------------------------------------------------
+#   sg_engine_assign_fallback_color_effect = {
+#       R_VAR = <variable name>    0..1 red   on the scoped object
+#       G_VAR = <variable name>    0..1 green
+#       B_VAR = <variable name>    0..1 blue
+#   }
+#
+# Called in the scope of ONE object. Idempotent: safe to call every snapshot,
+# and meant to be, because that is how an object that appears mid-campaign
+# gets a colour without anything having to notice it appeared.
+#
+# WHY A ROTOR AND NOT A HASH OF THE OBJECT
+# ----------------------------------------
+# The obvious alternative is to derive the slot from something already unique
+# about the object, so no state is needed. Script has nothing to derive it
+# from: there is no hash, and no id readable from script. The GUI does expose a
+# numeric id, so the choice could have been pushed there instead - but then the
+# colour would be recomputed at draw time from an id that is only stable for as
+# long as the load order is, and a colour that quietly changes when a playset
+# changes is worse than one that is written down.
+#
+# A rotor is written down. It is assigned ONCE, on the snapshot where the
+# object is first seen, and persists in the save from then on, so an object
+# keeps its colour for the rest of the campaign no matter what is installed
+# later. The cost is that two campaigns will colour the same object
+# differently, which does not matter: nothing compares colours across saves.
+#
+# WHY THE CALLER SHOULD GATE THIS ON ITS OWN "IS TRACKED" MARKER
+# --------------------------------------------------------------
+# Nothing here forces that, but calling this for every object in the database
+# rather than only the ones a picker can reach writes three variables per
+# object into every save from then on, and burns rotor slots on objects nobody
+# will ever look at. Both consumers of this so far gate it the same way they
+# gate registry membership.
+#
+# THE PALETTE
+# -----------
+# Twelve slots, because more than that stop being tellable apart at a 3px line
+# width and fewer start repeating within one picker's worth of rows.
+#
+# Every entry is dark and saturated on purpose. The plot draws on vanilla's
+# letter paper, which sits around { 0.66 0.63 0.55 }, so a colour only reads as
+# a line if it is clearly darker than that. Luminance here runs 0.06 to 0.33
+# against the paper's 0.62. Hues are spaced around the wheel rather than
+# evenly, because consecutive slots being distinguishable matters more than the
+# set being mathematically regular - the rotor hands out slots in order, so
+# neighbours in this list are usually neighbours on screen.
+#
+# `global_var:x = N` and `global_var:x >= N` in a limit are vanilla syntax
+# (00_almohad_invasion_effects.txt:194, 00_ai_value_effects.txt:380).
+# Forwarding a parameter into a nested scripted effect call is vanilla too
+# (00_adventure_effects.txt:11-12).
+###############################################################################
+
+# One slot of the palette. Writes nothing unless the rotor is pointing at it,
+# which is what lets the caller below be a flat list rather than a chain.
+sg_engine_palette_slot_effect = {
+
+	if = {
+		limit = { global_var:sg_color_rotor = $SLOT$ }
+		set_variable = { name = $R_VAR$ value = $R$ }
+		set_variable = { name = $G_VAR$ value = $G$ }
+		set_variable = { name = $B_VAR$ value = $B$ }
+	}
+}
+
+sg_engine_assign_fallback_color_effect = {
+
+	# The whole body is inside this guard, so an object that already has a
+	# colour costs one trigger and does not advance the rotor. R_VAR alone is
+	# the test: the three are only ever written together, so any one of them
+	# answers for all three.
+	if = {
+		limit = { NOT = { has_variable = $R_VAR$ } }
+
+		# The rotor does not exist until the first object needs a colour. Same
+		# first-use guard the snapshot counters use.
+		if = {
+			limit = { NOT = { has_global_variable = sg_color_rotor } }
+			set_global_variable = { name = sg_color_rotor value = 0 }
+		}
+
+		sg_engine_palette_slot_effect = { SLOT = 0  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.60 G = 0.11 B = 0.11 }
+		sg_engine_palette_slot_effect = { SLOT = 1  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.11 G = 0.20 B = 0.50 }
+		sg_engine_palette_slot_effect = { SLOT = 2  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.13 G = 0.38 B = 0.18 }
+		sg_engine_palette_slot_effect = { SLOT = 3  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.42 G = 0.15 B = 0.50 }
+		sg_engine_palette_slot_effect = { SLOT = 4  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.70 G = 0.35 B = 0.05 }
+		sg_engine_palette_slot_effect = { SLOT = 5  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.06 G = 0.40 B = 0.42 }
+		sg_engine_palette_slot_effect = { SLOT = 6  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.46 G = 0.08 B = 0.28 }
+		sg_engine_palette_slot_effect = { SLOT = 7  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.38 G = 0.38 B = 0.08 }
+		sg_engine_palette_slot_effect = { SLOT = 8  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.18 G = 0.42 B = 0.62 }
+		sg_engine_palette_slot_effect = { SLOT = 9  R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.40 G = 0.26 B = 0.13 }
+		sg_engine_palette_slot_effect = { SLOT = 10 R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.65 G = 0.13 B = 0.45 }
+		sg_engine_palette_slot_effect = { SLOT = 11 R_VAR = $R_VAR$ G_VAR = $G_VAR$ B_VAR = $B_VAR$ R = 0.25 G = 0.28 B = 0.35 }
+
+		# Advance and wrap. Wrapping by comparison rather than by a modulo
+		# because script has no modulo on a global; the two are the same thing
+		# here since the rotor only ever moves one step at a time.
+		#
+		# THE COUNT 12 IS WRITTEN IN TWO PLACES - the slot list above and this
+		# comparison. Add a slot without changing this and the new slot is dead
+		# code that never fires.
+		change_global_variable = { name = sg_color_rotor add = 1 }
+		if = {
+			limit = { global_var:sg_color_rotor >= 12 }
+			set_global_variable = { name = sg_color_rotor value = 0 }
+		}
+	}
+}

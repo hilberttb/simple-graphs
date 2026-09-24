@@ -6,6 +6,7 @@ debug_and_error_dump_collection/
 # Files
 verify_snapshot_totals.py
 check_sg_rules.py
+generate_faithculture_colors.py
 
 DOCUMENTATION.md
 TODO.md

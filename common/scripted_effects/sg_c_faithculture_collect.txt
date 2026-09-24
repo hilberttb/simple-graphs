@@ -43,6 +43,40 @@
 
 sg_c_faithculture_snapshot_effect = {
 
+	# --- Step 0a: stamp the authored colours, once per save ---------------------
+	# sg_c_faithculture_colors.txt is generated from the CK3 install's own
+	# religion_types/ and cultures/ files, because CK3 exposes a faith's or a
+	# culture's authored colour to NOTHING at runtime - no accessor on Faith,
+	# Religion, Culture, CulturePillar, CultureTemplate or CultureTemplateData
+	# returns a colour, and no effect or trigger reads one. That file's header
+	# has the full search.
+	#
+	# It writes by KEY from scope none - `faith:catholic = { ... }` - which is one
+	# scope resolution per row. The alternative shape, asking each faith inside
+	# the loops below "are you catholic, are you orthodox, ...", is the same table
+	# turned inside out and costs objects x keys instead of keys. Hence a separate
+	# pass here rather than a call further down.
+	#
+	# ONCE PER SAVE, not once per snapshot: authored colours never change, so
+	# there is nothing to refresh. Running it on the first snapshot rather than at
+	# game start is what makes this work on a save made before 0.2.0 - the stamp
+	# happens on that save's next snapshot, with no migration step.
+	#
+	# THE FLAG IS A NUMBER, NOT A BOOL, ON PURPOSE. Bumping it re-stamps every
+	# object on the next snapshot of every existing save, which is the upgrade
+	# path for a regenerated table - after a CK3 patch adds faiths, say. Raise
+	# both numbers together.
+	if = {
+		limit = {
+			OR = {
+				NOT = { has_global_variable = sg_c_faithculture_colors_stamped }
+				global_var:sg_c_faithculture_colors_stamped < 1
+			}
+		}
+		sg_c_faithculture_authored_colors_effect = yes
+		set_global_variable = { name = sg_c_faithculture_colors_stamped value = 1 }
+	}
+
 	# --- Step 0: the snapshot counters ---
 	# NOT DONE HERE ANY MORE. sg_snapshot_base and sg_snapshot_index are
 	# advanced by sg_engine_begin_snapshot_effect, which sg_wiring.txt calls
@@ -230,6 +264,24 @@ sg_c_faithculture_snapshot_effect = {
 				MARKER_VAR = sg_faithculture_ever_tracked
 			}
 
+			# Give this faith a colour if the generated table above did not - i.e.
+			# if it is a faith reformed during this campaign, or one from another
+			# mod. The engine effect is idempotent and checks for itself, so this
+			# costs one trigger per faith per snapshot once everything is coloured.
+			#
+			# Gated on the SAME sticky marker the registry is gated on, so only
+			# faiths the picker can actually reach pay for three variables in the
+			# save. A faith that becomes tracked later is picked up on the snapshot
+			# that tracks it, because this runs every snapshot rather than once.
+			if = {
+				limit = { has_variable = sg_faithculture_ever_tracked }
+				sg_engine_assign_fallback_color_effect = {
+					R_VAR = sg_faithculture_color_r
+					G_VAR = sg_faithculture_color_g
+					B_VAR = sg_faithculture_color_b
+				}
+			}
+
 			# ADDED (grouped picker): file this faith under its RELIGION, so the
 			# picker can print a "Christianity" header above the Catholics and
 			# the Orthodox instead of running all several hundred faiths
@@ -304,6 +356,20 @@ sg_c_faithculture_snapshot_effect = {
 			REGISTRY   = sg_culture_registry
 			VALUE_VAR  = sg_faithculture_running_count
 			MARKER_VAR = sg_faithculture_ever_tracked
+		}
+
+		# Same as the faith branch, and the three variable names are shared with it
+		# for the same reason PREV_Y_VAR and MARKER_VAR are: no object is both a
+		# faith and a culture, so per-object variables cannot collide. Hybrid and
+		# divergent cultures are the common case here - they cannot be in a
+		# generated table, because they did not exist when it was generated.
+		if = {
+			limit = { has_variable = sg_faithculture_ever_tracked }
+			sg_engine_assign_fallback_color_effect = {
+				R_VAR = sg_faithculture_color_r
+				G_VAR = sg_faithculture_color_g
+				B_VAR = sg_faithculture_color_b
+			}
 		}
 
 		# ADDED (grouped picker): file this culture under its HERITAGE, so the

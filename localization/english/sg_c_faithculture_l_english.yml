@@ -69,3 +69,7 @@
  SG_C_FC_LBL_SELPLOT:0 "Counties over time - oldest snapshot at the left, higher means more counties."
  SG_C_FC_TT_CLICK:0 "Click to plot this one."
  SG_C_FC_LBL_OBSERVER:0 "OBSERVER MODE - selection is unavailable without a player character. Everything else on this window still works."
+
+# TEMPORARY, paired with the diagnostic block in the window. Delete both
+# together once the series colour is confirmed working.
+ SG_C_FC_LBL_COLORDBG:0 "colour r/g/b:"

@@ -249,16 +249,90 @@ window = {
 		text = "SG_C_FC_LBL_SELPLOT"
 	}
 
+	### THE PAPER ##############################################################
+	# A sibling BEHIND the plot rather than a background ON it, and bigger than
+	# it on all four sides. Two things forced that, one cosmetic and one real.
+	#
+	# THE REAL ONE: a series sitting at zero plots at y = 300, which is the plot
+	# area's own bottom edge. The line is 3px wide and centred on its y, so half
+	# of it, plus the line_cap, hung below the paper and drew on the window's
+	# black background. Reported from the first coloured run: "very low lines
+	# render on the black part, not the paper". A background can only ever be
+	# exactly as big as its widget, so the paper had to stop being one.
+	#
+	# THE COSMETIC ONE: a line flush against the edge of a sheet of paper reads
+	# as a clipping bug even when it is not one.
+	#
+	# GEOMETRY, and every number in it is constrained by something:
+	#   x 36..644   the exact gap between the two y-label columns. The start
+	#               label occupies x 0..36 right-aligned and the end label
+	#               x 644..684, both in the window's light default text colour.
+	#               One pixel wider either way and a digit lands on the paper
+	#               and stops being readable.
+	#   y 128..444  10px above the plot and 6px below it. The lower bound is the
+	#               x-axis row, which moved from y 442 to y 450 to make this fit;
+	#               its year labels are light text too and must stay off the
+	#               sheet. The counters row and the numbers scrollbox moved with
+	#               it, and the scrollbox lost 8px of height so the stack still
+	#               ends at y 630 where it did before.
+	#
+	# WHY THE TEMPLATE IS INLINED HERE INSTEAD OF `using`d
+	# ----------------------------------------------------
+	# These are Background_Letter_Default's own three tiles, blend modes and
+	# sprite types, copied from game/gui/shared/backgrounds.gui:401-425, with
+	# ONE number changed: spriteborder 200 -> 40.
+	#
+	# 200 is wrong for this widget and was wrong before the resize too. The
+	# tiles are 900x740 and a Corneredtiled border of 200 assumes a panel taller
+	# than 400px; at 314px the top and bottom borders overlap and the tileable
+	# middle never renders. That was flagged as an accepted compromise when the
+	# paper went in, on the reasoning that the flat tile is uniform enough for it
+	# not to matter. Since the bottom edge turned out to be exactly where the
+	# complaint came from, guessing about the bottom edge is no longer good
+	# enough. 40 keeps the ragged paper edge, which is only about 15px of the
+	# texture, and tiles the uniform middle - so the border arithmetic fits with
+	# room to spare at any height this window will ever use.
+	widget = {
+		name = "sg_c_fc_sel_plot_paper"
+		position = { 36 128 }
+		size = { 608 316 }
+
+		background = {
+			name = "paper_texture_shadow"
+			texture = "gfx/interface/component_tiles/tile_letter_shadow.dds"
+			spriteType = Corneredtiled
+			spriteborder = { 40 40 }
+		}
+
+		background = {
+			name = "paper_texture_flat"
+			texture = "gfx/interface/component_tiles/tile_letter_flat.dds"
+			spriteType = Corneredtiled
+			spriteborder = { 40 40 }
+
+			modify_texture = {
+				name = "paper_texture_overlay"
+				texture = "gfx/interface/component_tiles/overlay_letter_texture.dds"
+				spriteType = Corneredstretched
+				blend_mode = overlay
+			}
+		}
+	}
+
 	widget = {
 		name = "sg_c_fc_sel_plot_area"
 		position = { 40 138 }
 		size = { 600 300 }
 		allow_outside = yes
 
-		background = {
-			texture = "gfx/interface/colors/black.dds"
-			alpha = 0.45
-		}
+		# NO BACKGROUND HERE. The paper is drawn by sg_c_fc_sel_plot_paper, the
+		# sibling declared immediately above, which is deliberately LARGER than
+		# this widget. See that widget for why.
+		#
+		# This widget stays exactly 600x300 at exactly { 40 138 }. The 300 is the
+		# number sg_engine_append_point_effect encodes every packed segment
+		# against, and the whole point of moving the paper out is that the paper
+		# can now be resized for looks without this going anywhere near it.
 
 		# --- selection is a FAITH --------------------------------------------
 		widget = {
@@ -275,6 +349,67 @@ window = {
 
 					line = {
 						using = sg_engine_line_data
+						# --- THE SERIES COLOUR -------------------------------------
+						# Overrides the ink literal in sg_engine_line_data. Vanilla
+						# overrides a property a `using`d template set in 160 places
+						# (window_activity.gui:2257 does it to Background_Bottom_Fade's
+						# alpha, frontend_bookmarks.gui:4015 to portrait_base's texture),
+						# so the override itself is ordinary.
+						#
+						# WHAT IS *NOT* ORDINARY, AND MUST BE CHECKED IN GAME: binding
+						# an expression to a `line`'s colour has NO vanilla precedent.
+						# game/gui, jomini/gui and clausewitz/gui contain 9 `line`
+						# widgets in total, in three files, and not one binds `color`;
+						# of the 12 templates in shared/lines.gui only 2 set a colour and
+						# both are literals. Databound `color` is itself ordinary - 32
+						# sites, 20 distinct expressions, e.g. Artifact.GetRarityColor -
+						# just never on this widget.
+						#
+						# THE FAILURE MODE IS DESIGNED TO BE SURVIVABLE. If this binding
+						# does nothing, the template's { 0.1 0.1 0.03 } stands and the
+						# plot is exactly what it was before colour existed - a legible
+						# dark line on paper - rather than an invisible or absent one.
+						# That is why the literal stayed in the template instead of being
+						# moved out here.
+						#
+						# WHERE THE THREE NUMBERS COME FROM
+						#   sg_c_faithculture_colors.txt  the authored colour, generated
+						#                                 from the CK3 install's own files
+						#                                 because nothing exposes it at
+						#                                 runtime
+						#   sg_engine_palette.txt         a rotor-assigned palette colour
+						#                                 for anything that table cannot
+						#                                 know: reformed faiths, hybrid and
+						#                                 divergent cultures, other mods
+						#
+						# Stored as three 0..1 fractions rather than one packed number so
+						# that FixedPointToFloat is the whole decode.
+						#
+						# The read is <Type>.MakeScope.Var( 'name' ).GetValue. It was
+						# .GetVariable( 'name' ) on the first run, which drew every series
+						# in the ink colour; Var was swapped in because vanilla GUI uses
+						# it 81 times and GetVariable zero times. THAT IS NOT WHY THE
+						# FIRST RUN FAILED, and the record should not imply it was: the
+						# picker's own county column further down this file reads
+						# Faith.MakeScope.GetVariable( 'sg_faithculture_counties_now' )
+						# .GetValue and has rendered real numbers since 2026-09-13. Both
+						# promotes work. Var is kept only because it is the attested form.
+						#
+						# The actual cause is still open, and the diagnostic row near the
+						# bottom of this window plus the literal control on the culture
+						# line below are what will close it. The packing the rest
+						# of this mod uses exists because add_to_variable_list
+						# de-duplicates by value; these are plain variables, so none of
+						# that applies and there is nothing to unpack, no radix to get
+						# right and no Divide_int32 rounding question to reason about.
+						#
+						# Script writes all three the moment an object becomes trackable,
+						# so they are set before a row exists to click. The one gap is a
+						# save made before 0.2.0, whose objects are stamped on its next
+						# snapshot - at most one in-game year during which this reads an
+						# unset variable.
+						color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+
 						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
 						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
 					}
@@ -297,6 +432,73 @@ window = {
 
 					line = {
 						using = sg_engine_line_data
+						# --- THE SERIES COLOUR -------------------------------------
+						# Overrides the ink literal in sg_engine_line_data. Vanilla
+						# overrides a property a `using`d template set in 160 places
+						# (window_activity.gui:2257 does it to Background_Bottom_Fade's
+						# alpha, frontend_bookmarks.gui:4015 to portrait_base's texture),
+						# so the override itself is ordinary.
+						#
+						# WHAT IS *NOT* ORDINARY, AND MUST BE CHECKED IN GAME: binding
+						# an expression to a `line`'s colour has NO vanilla precedent.
+						# game/gui, jomini/gui and clausewitz/gui contain 9 `line`
+						# widgets in total, in three files, and not one binds `color`;
+						# of the 12 templates in shared/lines.gui only 2 set a colour and
+						# both are literals. Databound `color` is itself ordinary - 32
+						# sites, 20 distinct expressions, e.g. Artifact.GetRarityColor -
+						# just never on this widget.
+						#
+						# THE FAILURE MODE IS DESIGNED TO BE SURVIVABLE. If this binding
+						# does nothing, the template's { 0.1 0.1 0.03 } stands and the
+						# plot is exactly what it was before colour existed - a legible
+						# dark line on paper - rather than an invisible or absent one.
+						# That is why the literal stayed in the template instead of being
+						# moved out here.
+						#
+						# WHERE THE THREE NUMBERS COME FROM
+						#   sg_c_faithculture_colors.txt  the authored colour, generated
+						#                                 from the CK3 install's own files
+						#                                 because nothing exposes it at
+						#                                 runtime
+						#   sg_engine_palette.txt         a rotor-assigned palette colour
+						#                                 for anything that table cannot
+						#                                 know: reformed faiths, hybrid and
+						#                                 divergent cultures, other mods
+						#
+						# Stored as three 0..1 fractions rather than one packed number so
+						# that FixedPointToFloat is the whole decode.
+						#
+						# The read is <Type>.MakeScope.Var( 'name' ).GetValue. It was
+						# .GetVariable( 'name' ) on the first run, which drew every series
+						# in the ink colour; Var was swapped in because vanilla GUI uses
+						# it 81 times and GetVariable zero times. THAT IS NOT WHY THE
+						# FIRST RUN FAILED, and the record should not imply it was: the
+						# picker's own county column further down this file reads
+						# Faith.MakeScope.GetVariable( 'sg_faithculture_counties_now' )
+						# .GetValue and has rendered real numbers since 2026-09-13. Both
+						# promotes work. Var is kept only because it is the attested form.
+						#
+						# The actual cause is still open, and the diagnostic row near the
+						# bottom of this window plus the literal control on this culture
+						# line are what will close it. The packing the rest
+						# of this mod uses exists because add_to_variable_list
+						# de-duplicates by value; these are plain variables, so none of
+						# that applies and there is nothing to unpack, no radix to get
+						# right and no Divide_int32 rounding question to reason about.
+						#
+						# Script writes all three the moment an object becomes trackable,
+						# so they are set before a row exists to click. The one gap is a
+						# save made before 0.2.0, whose objects are stamped on its next
+						# snapshot - at most one in-game year during which this reads an
+						# unset variable.
+						# The literal control that ran here on run 2 is gone. It did its
+						# job: with color = { 0.85 0.10 0.10 1.0 } every culture line drew
+						# RED, which proves a `line` DOES honour a `color` set after
+						# `using`. Candidate (b) - "the template always wins" - is dead,
+						# and sg_engine_line_data can keep its ink literal as the safety
+						# net without that costing anything.
+						color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+
 						from = "[FloatToCVector2f( Multiply_float( IntToFloat( PdxGuiWidget.GetIndexInDataModel ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' ) ) )]"
 						to = "[FloatToCVector2f( Multiply_float( IntToFloat( Add_int32( PdxGuiWidget.GetIndexInDataModel, '(int32)1' ) ), Divide_float( '(float)600', IntToFloat( Max_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)1' ) ) ) ), IntToFloat( Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ) ) )]"
 					}
@@ -550,7 +752,7 @@ window = {
 	# polymorphic accessor that would let one block serve both.
 	widget = {
 		name = "sg_c_fc_xaxis"
-		position = { 40 442 }
+		position = { 40 450 }
 		size = { 600 20 }
 		allow_outside = yes
 
@@ -619,7 +821,7 @@ window = {
 	# Cheap to keep, and the first thing to read if a plot ever looks wrong.
 	widget = {
 		name = "sg_c_fc_sel_counters"
-		position = { 40 468 }
+		position = { 40 476 }
 		size = { 600 20 }
 
 		text_single = {
@@ -669,8 +871,8 @@ window = {
 
 	scrollbox = {
 		name = "sg_c_fc_sel_numbers_scroll"
-		position = { 40 494 }
-		size = { 600 136 }
+		position = { 40 502 }
+		size = { 600 128 }
 
 		blockoverride "scrollbox_content"
 		{
@@ -805,6 +1007,105 @@ window = {
 			}
 		}
 	}
+
+
+	### TEMPORARY DIAGNOSTIC - DELETE THIS WHOLE BLOCK ONCE COLOUR IS CONFIRMED ###
+	# Added after the first run drew every series in the plot's ink colour instead
+	# of its own. error.log proves the script side works: it reports
+	# sg_faithculture_color_g and _b as "set but never used" (the usual harmless
+	# message - CK3 cannot see GUI usage), and pointedly does NOT report _r,
+	# because the engine's fallback effect reads _r in a has_variable guard. So
+	# the variables exist and hold values. What is unproven is whether the GUI can
+	# read them, and whether a `line` will take a bound colour at all.
+	#
+	# This row answers both in one run:
+	#
+	#   numbers blank or 0   -> the read chain is wrong, and the swatch and the
+	#                           line are both downstream of that
+	#   numbers correct,
+	#     swatch correct,
+	#     line still ink     -> `line` ignores a bound `color`. Everything else
+	#                           works. That needs a different mechanism, not a
+	#                           different expression
+	#   numbers correct,
+	#     swatch wrong       -> the FloatToCVector4f construction is at fault
+	#   all three correct    -> done; delete this block
+	#
+	# Expected numbers for Catholicism: 0.4583  0.4583  0.3437
+	# Expected numbers for Orthodoxy:   0.7     0       0.5
+	widget = {
+		name = "sg_c_fc_colordbg"
+		position = { 40 640 }
+		size = { 600 20 }
+
+		text_single = {
+			position = { 0 0 }
+			text = "SG_C_FC_LBL_COLORDBG"
+		}
+
+		widget = {
+			name = "sg_c_fc_colordbg_faith"
+			size = { 600 20 }
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+
+			text_single = {
+				position = { 110 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
+			}
+			text_single = {
+				position = { 190 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
+			}
+			text_single = {
+				position = { 270 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
+			}
+
+			# The swatch. `color` on an `icon` IS vanilla-attested
+			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
+			# the same binding on a `line`. So if this square is the right
+			# colour while the plot line is not, the fault is the `line`
+			# widget and nothing else - not the variables, not the decode.
+			icon = {
+				position = { 360 2 }
+				size = { 60 16 }
+				texture = "gfx/interface/colors/white.dds"
+				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+			}
+		}
+
+		widget = {
+			name = "sg_c_fc_colordbg_culture"
+			size = { 600 20 }
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+
+			text_single = {
+				position = { 110 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
+			}
+			text_single = {
+				position = { 190 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
+			}
+			text_single = {
+				position = { 270 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
+			}
+
+			# The swatch. `color` on an `icon` IS vanilla-attested
+			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
+			# the same binding on a `line`. So if this square is the right
+			# colour while the plot line is not, the fault is the `line`
+			# widget and nothing else - not the variables, not the decode.
+			icon = {
+				position = { 360 2 }
+				size = { 60 16 }
+				texture = "gfx/interface/colors/white.dds"
+				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+			}
+		}
+	}
+	### END TEMPORARY DIAGNOSTIC ###############################################
 
 	### THE PICKER ##############################################################
 	# Every faith and every culture that has ever held a county, read straight

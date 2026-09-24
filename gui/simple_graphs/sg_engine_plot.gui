@@ -53,11 +53,38 @@
 # the default line effect rather than PdxGuiLineScreenSpace. This one matches.
 ###############################################################################
 
+# ---------------------------------------------------------------------------
+# WHY THE LINE IS INK-COLOURED AND NOT WHITE
+# ---------------------------------------------------------------------------
+# It was { 1.0 1.0 1.0 1.0 } for as long as the plot sat on a black panel. The
+# plot area now draws vanilla's unskinned letter paper (Background_Letter_Default,
+# game/gui/shared/backgrounds.gui:401), whose flat tile is a warm grey-beige at
+# roughly { 0.66 0.63 0.55 }. A white line on that is very nearly invisible, so
+# the two changes are one change and must not be split.
+#
+# { 0.1 0.1 0.03 } is not a guess. It is vanilla's own ink-on-paper value: the
+# text format `light_background` resolves to `color_black`, defined as
+# color:{ 0.1, 0.1, 0.03 } at game/gui/preload/textformatting.gui:70-72, and
+# that format is what every vanilla panel using this same paper applies to the
+# text it puts on top (window_activity_list.gui:594). Matching it means the
+# line reads as written on the sheet rather than drawn over it.
+#
+# `color` MULTIPLIES the texture, which is why the texture stays white.dds - a
+# white source is the only one that reproduces the tint exactly.
+#
+# This is a LITERAL colour, deliberately. Vanilla never binds an expression to
+# a `line`'s colour. A sweep of game/gui, jomini/gui and clausewitz/gui finds
+# 9 `line` widgets in total, across three files, and not one has a databound
+# `color`; of the 12 line templates in shared/lines.gui exactly 2 set a colour
+# at all, and both are literals. (Rule 1 forbids naming either here: one of
+# them is named after the object type its window draws.)
+# Per-series colour therefore has no precedent to copy and is not attempted
+# here - the consumer window overrides this value instead.
 template sg_engine_line_data
 {
 	width = 3
 	line_cap = yes
-	color = { 1.0 1.0 1.0 1.0 }
+	color = { 0.1 0.1 0.03 1.0 }
 	texture = "gfx/lines/white.dds"
 	uv_scale = { 1.0 1.0 }
 	mask = "gfx/lines/white.dds"

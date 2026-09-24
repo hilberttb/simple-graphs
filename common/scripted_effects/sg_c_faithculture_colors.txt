@@ -1,0 +1,447 @@
+﻿###############################################################################
+# Simple Graphs - GENERATED FILE. DO NOT EDIT BY HAND.
+#
+# Written by generate_faithculture_colors.py, which reads the authored colour
+# of every vanilla faith and culture straight out of the CK3 install and emits
+# it as script. Edit the generator, not this.
+#
+#   generated from : CK3 unknown
+#   faiths         : 140
+#   cultures       : 244
+#   luminance cap  : 0.45
+#
+# WHY A GENERATED TABLE AND NOT A LOOKUP AT RUNTIME
+# -------------------------------------------------
+# Because there is no lookup at runtime. CK3 1.19 exposes no faith or culture
+# colour to script or to GUI - no accessor on Faith, Religion, Culture,
+# CulturePillar, CultureTemplate or CultureTemplateData returns a colour, and
+# no effect or trigger reads one. The colours exist only in the game's own
+# data files, so the only way to have them is to read those files before the
+# game runs and ship the answer. The generator's header documents the cost.
+#
+# CONSUMER FILE. It names faiths and cultures on every line, which is exactly
+# what a consumer file is for and exactly what rule 1 forbids an engine file
+# from doing. The engine half of this feature is the palette in
+# sg_engine_palette.txt, which names nothing.
+#
+# THE COLOURS ARE DARKENED relative to the authored values, by a single scale
+# factor per colour that leaves hue and saturation untouched. The plot draws
+# on vanilla's letter paper and a lot of map colours are too pale to see on
+# it. See the generator's header.
+#
+# WHAT READS THESE VARIABLES
+# --------------------------
+#   sg_faithculture_color_r / _g / _b   0..1 per channel, per object.
+#   gui/simple_graphs/sg_c_faithculture_window.gui turns them into the line's
+#   colour with FixedPointToFloat, which is why they are stored as fractions
+#   rather than 0..255 or packed into one number.
+#
+# An object with no row here keeps no colour from this file and is given a
+# palette colour by sg_engine_assign_fallback_color_effect instead. That is
+# every faith and culture created during a campaign, and every one added by
+# another mod.
+###############################################################################
+
+# One line per object below, so the table stays readable as a table. The three
+# variable names live here rather than at every call site.
+sg_c_faithculture_set_color_effect = {
+	set_variable = { name = sg_faithculture_color_r value = $R$ }
+	set_variable = { name = sg_faithculture_color_g value = $G$ }
+	set_variable = { name = sg_faithculture_color_b value = $B$ }
+}
+
+# Called ONCE per save, from sg_c_faithculture_snapshot_effect, guarded by the
+# global sg_c_faithculture_colors_stamped. Stamping by key from scope none is
+# O(1) per object; asking each object "which key are you" from inside the
+# collection loops would be O(objects x keys) and is why it is done this way
+# round.
+sg_c_faithculture_authored_colors_effect = {
+	# --- FAITHS --------------------------------------------------------
+	faith:akom_pagan                = { sg_c_faithculture_set_color_effect = { R = 0.5675 G = 0.4414 B = 0.1892 } }
+	faith:aluk                      = { sg_c_faithculture_set_color_effect = { R = 0.4118 G = 0.2824 B = 0.6863 } }
+	faith:baltic_pagan              = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.4 B = 0.3 } }
+	faith:basque_pagan              = { sg_c_faithculture_set_color_effect = { R = 0.55 G = 0.42 B = 0.04 } }
+	faith:bilikuism                 = { sg_c_faithculture_set_color_effect = { R = 0.0353 G = 0.3373 B = 0.451 } }
+	faith:pulugaism                 = { sg_c_faithculture_set_color_effect = { R = 0.1445 G = 0.5418 B = 0.4406 } }
+	faith:bimoism                   = { sg_c_faithculture_set_color_effect = { R = 0.5439 G = 0.4344 B = 0.3284 } }
+	faith:bon                       = { sg_c_faithculture_set_color_effect = { R = 0.0239 G = 0.5607 B = 0.6084 } }
+	faith:old_bon                   = { sg_c_faithculture_set_color_effect = { R = 0.03 G = 0.45 B = 0.42 } }
+	faith:theravada                 = { sg_c_faithculture_set_color_effect = { R = 0.7892 G = 0.3946 B = 0.0 } }
+	faith:mahayana                  = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.2 } }
+	faith:vajrayana                 = { sg_c_faithculture_set_color_effect = { R = 0.9 G = 0.3 B = 0.0 } }
+	faith:ari                       = { sg_c_faithculture_set_color_effect = { R = 0.3882 G = 0.0 B = 0.2235 } }
+	faith:lamaism                   = { sg_c_faithculture_set_color_effect = { R = 0.9 G = 0.2 B = 0.0 } }
+	faith:pundarika                 = { sg_c_faithculture_set_color_effect = { R = 0.8278 G = 0.3733 B = 0.0974 } }
+	faith:mantrayana                = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.098 B = 0.0196 } }
+	faith:dhyana                    = { sg_c_faithculture_set_color_effect = { R = 0.6667 G = 0.1451 B = 0.1098 } }
+	faith:sukhavati                 = { sg_c_faithculture_set_color_effect = { R = 0.5451 G = 0.251 B = 0.0824 } }
+	faith:avatamsaka                = { sg_c_faithculture_set_color_effect = { R = 0.702 G = 0.3608 B = 0.2667 } }
+	faith:maitreya                  = { sg_c_faithculture_set_color_effect = { R = 0.8635 G = 0.3725 B = 0.0 } }
+	faith:vinaya                    = { sg_c_faithculture_set_color_effect = { R = 0.569 G = 0.4505 B = 0.0948 } }
+	faith:yogacara                  = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.1961 B = 0.8 } }
+	faith:acharya                   = { sg_c_faithculture_set_color_effect = { R = 0.7435 G = 0.4082 B = 0.0 } }
+	faith:catholic                  = { sg_c_faithculture_set_color_effect = { R = 0.4583 G = 0.4583 B = 0.3437 } }
+	faith:orthodox                  = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.0 B = 0.5 } }
+	faith:coptic                    = { sg_c_faithculture_set_color_effect = { R = 0.4315 G = 0.4829 B = 0.1788 } }
+	faith:armenian_apostolic        = { sg_c_faithculture_set_color_effect = { R = 0.7769 G = 0.3885 B = 0.0971 } }
+	faith:conversos                 = { sg_c_faithculture_set_color_effect = { R = 0.3597 G = 0.4496 B = 0.7194 } }
+	faith:cathar                    = { sg_c_faithculture_set_color_effect = { R = 0.4254 G = 0.4254 B = 0.7658 } }
+	faith:waldensian                = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.2 B = 0.5 } }
+	faith:lollard                   = { sg_c_faithculture_set_color_effect = { R = 0.3056 G = 0.489 B = 0.489 } }
+	faith:iconoclast                = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.2 B = 0.4 } }
+	faith:bogomilist                = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.0 B = 0.2 } }
+	faith:paulician                 = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.1 B = 0.4 } }
+	faith:nestorian                 = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.5 } }
+	faith:messalian                 = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.1 B = 0.4 } }
+	faith:adamites                  = { sg_c_faithculture_set_color_effect = { R = 0.3634 G = 0.4845 B = 0.3634 } }
+	faith:insular_celtic            = { sg_c_faithculture_set_color_effect = { R = 0.4634 G = 0.4634 B = 0.278 } }
+	faith:bosnian_church            = { sg_c_faithculture_set_color_effect = { R = 0.5469 G = 0.4183 B = 0.479 } }
+	faith:mozarabic_church          = { sg_c_faithculture_set_color_effect = { R = 0.2548 G = 0.524 B = 0.2918 } }
+	faith:adoptionist               = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.2 B = 0.2 } }
+	faith:jingxue                   = { sg_c_faithculture_set_color_effect = { R = 0.5526 G = 0.4449 B = 0.199 } }
+	faith:daoxue                    = { sg_c_faithculture_set_color_effect = { R = 0.3425 G = 0.4818 B = 0.4521 } }
+	faith:dayawism                  = { sg_c_faithculture_set_color_effect = { R = 0.2864 G = 0.5246 B = 0.1924 } }
+	faith:donyipoloism              = { sg_c_faithculture_set_color_effect = { R = 0.0353 G = 0.3373 B = 0.451 } }
+	faith:sedism                    = { sg_c_faithculture_set_color_effect = { R = 0.1445 G = 0.5418 B = 0.4406 } }
+	faith:manichean                 = { sg_c_faithculture_set_color_effect = { R = 0.4644 G = 0.4644 B = 0.2654 } }
+	faith:mandeaism                 = { sg_c_faithculture_set_color_effect = { R = 0.3387 G = 0.508 B = 0.2032 } }
+	faith:sabianism                 = { sg_c_faithculture_set_color_effect = { R = 0.4611 G = 0.4611 B = 0.3074 } }
+	faith:valentinianism            = { sg_c_faithculture_set_color_effect = { R = 0.5732 G = 0.4299 B = 0.2866 } }
+	faith:sethianism                = { sg_c_faithculture_set_color_effect = { R = 0.5732 G = 0.4299 B = 0.2866 } }
+	faith:priscillianism            = { sg_c_faithculture_set_color_effect = { R = 0.2661 G = 0.5322 B = 0.1774 } }
+	faith:cainitism                 = { sg_c_faithculture_set_color_effect = { R = 0.2661 G = 0.5322 B = 0.1774 } }
+	faith:mingism                   = { sg_c_faithculture_set_color_effect = { R = 0.5014 G = 0.4525 B = 0.274 } }
+	faith:finnish_pagan             = { sg_c_faithculture_set_color_effect = { R = 0.485 G = 0.485 B = 0.0 } }
+	faith:norse_pagan               = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.4 B = 0.4 } }
+	faith:hantuism                  = { sg_c_faithculture_set_color_effect = { R = 0.2588 G = 0.3608 B = 0.0667 } }
+	faith:hellenic_pagan            = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.1 B = 0.1 } }
+	faith:vaishnavism               = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.0 B = 0.0 } }
+	faith:advaitism                 = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.2 B = 0.0 } }
+	faith:shaivism                  = { sg_c_faithculture_set_color_effect = { R = 0.9 G = 0.2 B = 0.3 } }
+	faith:srikula_shaktism          = { sg_c_faithculture_set_color_effect = { R = 0.622 G = 0.4443 B = 0.0 } }
+	faith:kalikula_shaktism         = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.2 B = 0.0 } }
+	faith:smartism                  = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.3 B = 0.3 } }
+	faith:krishnaism                = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.0 B = 0.5 } }
+	faith:saura                     = { sg_c_faithculture_set_color_effect = { R = 0.8105 G = 0.3337 B = 0.5403 } }
+	faith:dab_qhuas                 = { sg_c_faithculture_set_color_effect = { R = 0.451 G = 0.3098 B = 0.5882 } }
+	faith:ashari                    = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.6 B = 0.0 } }
+	faith:muwalladi                 = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.4 B = 0.0 } }
+	faith:maturidi                  = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.5 B = 0.3 } }
+	faith:masmudi                   = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.6 B = 0.2 } }
+	faith:mutazila                  = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.5869 B = 0.4192 } }
+	faith:quranist                  = { sg_c_faithculture_set_color_effect = { R = 0.1635 G = 0.5723 B = 0.0818 } }
+	faith:ismaili                   = { sg_c_faithculture_set_color_effect = { R = 0.1464 G = 0.5857 B = 0.0 } }
+	faith:qarmatian                 = { sg_c_faithculture_set_color_effect = { R = 0.0749 G = 0.5994 B = 0.0749 } }
+	faith:nizari                    = { sg_c_faithculture_set_color_effect = { R = 0.1635 G = 0.5723 B = 0.0818 } }
+	faith:zayidi                    = { sg_c_faithculture_set_color_effect = { R = 0.2076 G = 0.5535 B = 0.1384 } }
+	faith:imami                     = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.5 B = 0.1 } }
+	faith:ghulat                    = { sg_c_faithculture_set_color_effect = { R = 0.2652 G = 0.5303 B = 0.1989 } }
+	faith:alawite                   = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.4 B = 0.1 } }
+	faith:alevi                     = { sg_c_faithculture_set_color_effect = { R = 0.3452 G = 0.5179 B = 0.0863 } }
+	faith:druze                     = { sg_c_faithculture_set_color_effect = { R = 0.2362 G = 0.551 B = 0.0787 } }
+	faith:ibadi                     = { sg_c_faithculture_set_color_effect = { R = 0.2624 G = 0.5247 B = 0.2624 } }
+	faith:azariqa                   = { sg_c_faithculture_set_color_effect = { R = 0.2195 G = 0.5122 B = 0.5122 } }
+	faith:najdat                    = { sg_c_faithculture_set_color_effect = { R = 0.3978 G = 0.4641 B = 0.4641 } }
+	faith:sufri                     = { sg_c_faithculture_set_color_effect = { R = 0.2951 G = 0.4918 B = 0.4918 } }
+	faith:hafizi                    = { sg_c_faithculture_set_color_effect = { R = 0.3181 G = 0.5089 B = 0.2545 } }
+	faith:digambara                 = { sg_c_faithculture_set_color_effect = { R = 0.4704 G = 0.4704 B = 0.1882 } }
+	faith:svetambara                = { sg_c_faithculture_set_color_effect = { R = 0.5206 G = 0.4628 B = 0.1157 } }
+	faith:yapaniya                  = { sg_c_faithculture_set_color_effect = { R = 0.5002 G = 0.4502 B = 0.3001 } }
+	faith:rabbinism                 = { sg_c_faithculture_set_color_effect = { R = 0.0757 G = 0.5302 B = 0.7574 } }
+	faith:karaism                   = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.3 B = 0.7 } }
+	faith:haymanot                  = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.5 B = 0.9 } }
+	faith:malabarism                = { sg_c_faithculture_set_color_effect = { R = 0.2861 G = 0.4768 B = 0.6675 } }
+	faith:samaritan                 = { sg_c_faithculture_set_color_effect = { R = 0.0691 G = 0.5528 B = 0.5528 } }
+	faith:kabarism                  = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.3 B = 0.7 } }
+	faith:merkabah                  = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.1 B = 0.7 } }
+	faith:kaharingan                = { sg_c_faithculture_set_color_effect = { R = 0.187 G = 0.5198 B = 0.5329 } }
+	faith:kamuyism_pagan            = { sg_c_faithculture_set_color_effect = { R = 0.1961 G = 0.0784 B = 0.0392 } }
+	faith:kushitism_pagan           = { sg_c_faithculture_set_color_effect = { R = 0.5255 G = 0.473 B = 0.0 } }
+	faith:magyar_pagan              = { sg_c_faithculture_set_color_effect = { R = 0.7733 G = 0.3712 B = 0.2784 } }
+	faith:moism                     = { sg_c_faithculture_set_color_effect = { R = 0.2157 G = 0.1882 B = 0.3176 } }
+	faith:mu                        = { sg_c_faithculture_set_color_effect = { R = 0.853 G = 0.3412 B = 0.3412 } }
+	faith:kiratism                  = { sg_c_faithculture_set_color_effect = { R = 0.502 G = 0.1804 B = 0.3412 } }
+	faith:yumaism                   = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.3 } }
+	faith:north_african_acham_pagan = { sg_c_faithculture_set_color_effect = { R = 0.7948 G = 0.374 B = 0.187 } }
+	faith:pagan                     = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.0 B = 0.0 } }
+	faith:rrmeaism                  = { sg_c_faithculture_set_color_effect = { R = 0.4504 G = 0.4444 B = 0.5044 } }
+	faith:melieism                  = { sg_c_faithculture_set_color_effect = { R = 0.4505 G = 0.4431 B = 0.5169 } }
+	faith:satsana_phi               = { sg_c_faithculture_set_color_effect = { R = 0.2784 G = 0.1255 B = 0.2745 } }
+	faith:shamanism                 = { sg_c_faithculture_set_color_effect = { R = 0.0902 G = 0.2627 B = 0.2196 } }
+	faith:shinto                    = { sg_c_faithculture_set_color_effect = { R = 0.7373 G = 0.0 B = 0.1765 } }
+	faith:shugendo                  = { sg_c_faithculture_set_color_effect = { R = 0.6659 G = 0.3917 B = 0.3917 } }
+	faith:siberian_pagan            = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	faith:slavic_pagan              = { sg_c_faithculture_set_color_effect = { R = 0.5254 G = 0.4503 B = 0.2252 } }
+	faith:zhengyi                   = { sg_c_faithculture_set_color_effect = { R = 0.0314 G = 0.549 B = 0.5137 } }
+	faith:shangqing                 = { sg_c_faithculture_set_color_effect = { R = 0.2304 G = 0.5109 B = 0.4932 } }
+	faith:quanzhen                  = { sg_c_faithculture_set_color_effect = { R = 0.1216 G = 0.4784 B = 0.4549 } }
+	faith:tengri_pagan              = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.2 B = 0.8 } }
+	faith:tolotang                  = { sg_c_faithculture_set_color_effect = { R = 0.1978 G = 0.5251 B = 0.449 } }
+	faith:utaki                     = { sg_c_faithculture_set_color_effect = { R = 0.5421 G = 0.3691 B = 0.9804 } }
+	faith:waaqism_pagan             = { sg_c_faithculture_set_color_effect = { R = 0.8431 G = 0.1569 B = 0.1176 } }
+	faith:ngaiism_pagan             = { sg_c_faithculture_set_color_effect = { R = 0.842 G = 0.3789 B = 0.0 } }
+	faith:west_african_pagan        = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.35 B = 0.0 } }
+	faith:west_african_bidu_pagan   = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.35 B = 0.3 } }
+	faith:west_african_bori_pagan   = { sg_c_faithculture_set_color_effect = { R = 0.75 G = 0.2 B = 0.0 } }
+	faith:west_african_orisha_pagan = { sg_c_faithculture_set_color_effect = { R = 0.149 G = 0.2471 B = 0.4902 } }
+	faith:west_african_roog_pagan   = { sg_c_faithculture_set_color_effect = { R = 0.6389 G = 0.4393 B = 0.0 } }
+	faith:yazidi                    = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.2 B = 0.7 } }
+	faith:meshefaresism             = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.1 B = 0.5 } }
+	faith:kitebacilweism            = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.1 B = 0.8 } }
+	faith:mazdayasna                = { sg_c_faithculture_set_color_effect = { R = 0.6822 G = 0.4264 B = 0.0 } }
+	faith:zurvanism                 = { sg_c_faithculture_set_color_effect = { R = 0.4201 G = 0.4902 B = 0.14 } }
+	faith:gayomarthianism           = { sg_c_faithculture_set_color_effect = { R = 0.5867 G = 0.44 B = 0.1467 } }
+	faith:khurmazta                 = { sg_c_faithculture_set_color_effect = { R = 0.5936 G = 0.4452 B = 0.0742 } }
+	faith:mazdakism                 = { sg_c_faithculture_set_color_effect = { R = 0.5199 G = 0.455 B = 0.195 } }
+	faith:khurramism                = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.3 B = 0.0 } }
+	faith:urartuism                 = { sg_c_faithculture_set_color_effect = { R = 0.5043 G = 0.4538 B = 0.2521 } }
+	faith:afridunism                = { sg_c_faithculture_set_color_effect = { R = 0.0839 G = 0.5873 B = 0.1678 } }
+	faith:zun_pagan                 = { sg_c_faithculture_set_color_effect = { R = 0.4468 G = 0.4964 B = 0.0 } }
+
+	# --- CULTURES ------------------------------------------------------
+	culture:akan             = { sg_c_faithculture_set_color_effect = { R = 0.88 G = 0.2605 B = 0.176 } }
+	culture:kru              = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.0949 B = 0.035 } }
+	culture:guan             = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.3727 B = 0.315 } }
+	culture:nivkh            = { sg_c_faithculture_set_color_effect = { R = 0.2392 G = 0.4275 B = 0.2196 } }
+	culture:bedouin          = { sg_c_faithculture_set_color_effect = { R = 0.0797 G = 0.5975 B = 0.0797 } }
+	culture:levantine        = { sg_c_faithculture_set_color_effect = { R = 0.1765 G = 0.5589 B = 0.1765 } }
+	culture:egyptian         = { sg_c_faithculture_set_color_effect = { R = 0.0983 G = 0.59 B = 0.0983 } }
+	culture:maghrebi         = { sg_c_faithculture_set_color_effect = { R = 0.0983 G = 0.59 B = 0.0983 } }
+	culture:yemeni           = { sg_c_faithculture_set_color_effect = { R = 0.1852 G = 0.5555 B = 0.1852 } }
+	culture:latgalian        = { sg_c_faithculture_set_color_effect = { R = 0.4776 G = 0.4776 B = 0.0955 } }
+	culture:lithuanian       = { sg_c_faithculture_set_color_effect = { R = 0.4783 G = 0.4698 B = 0.1708 } }
+	culture:prussian         = { sg_c_faithculture_set_color_effect = { R = 0.4655 G = 0.4572 B = 0.3325 } }
+	culture:finnish          = { sg_c_faithculture_set_color_effect = { R = 0.0911 G = 0.5469 B = 0.5469 } }
+	culture:sami             = { sg_c_faithculture_set_color_effect = { R = 0.2636 G = 0.4943 B = 0.5602 } }
+	culture:estonian         = { sg_c_faithculture_set_color_effect = { R = 0.2195 G = 0.5122 B = 0.5122 } }
+	culture:karelian         = { sg_c_faithculture_set_color_effect = { R = 0.0963 G = 0.5455 B = 0.5455 } }
+	culture:vepsian          = { sg_c_faithculture_set_color_effect = { R = 0.1967 G = 0.5244 B = 0.4589 } }
+	culture:east_bantu       = { sg_c_faithculture_set_color_effect = { R = 0.3313 G = 0.4638 B = 0.6626 } }
+	culture:swahili          = { sg_c_faithculture_set_color_effect = { R = 0.1611 G = 0.5755 B = 0.0575 } }
+	culture:butr             = { sg_c_faithculture_set_color_effect = { R = 0.6314 G = 0.3529 B = 0.1569 } }
+	culture:baranis          = { sg_c_faithculture_set_color_effect = { R = 0.6314 G = 0.2627 B = 0.0 } }
+	culture:guanches         = { sg_c_faithculture_set_color_effect = { R = 0.7098 G = 0.3412 B = 0.2627 } }
+	culture:zaghawa          = { sg_c_faithculture_set_color_effect = { R = 0.6314 G = 0.251 B = 0.0627 } }
+	culture:pictish          = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.3744 B = 0.72 } }
+	culture:welsh            = { sg_c_faithculture_set_color_effect = { R = 0.3226 G = 0.288 B = 0.72 } }
+	culture:breton           = { sg_c_faithculture_set_color_effect = { R = 0.4499 G = 0.304 B = 0.76 } }
+	culture:cornish          = { sg_c_faithculture_set_color_effect = { R = 0.4262 G = 0.288 B = 0.72 } }
+	culture:cumbrian         = { sg_c_faithculture_set_color_effect = { R = 0.288 G = 0.3571 B = 0.72 } }
+	culture:burmese          = { sg_c_faithculture_set_color_effect = { R = 0.2938 G = 0.5037 B = 0.3778 } }
+	culture:karen            = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.4 B = 0.2 } }
+	culture:kachin           = { sg_c_faithculture_set_color_effect = { R = 0.15 G = 0.3 B = 0.5 } }
+	culture:greek            = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.8 } }
+	culture:armenian         = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.0749 B = 0.035 } }
+	culture:georgian         = { sg_c_faithculture_set_color_effect = { R = 0.88 G = 0.2182 B = 0.176 } }
+	culture:kanuri           = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.14 B = 0.308 } }
+	culture:hausa            = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.0 B = 0.126 } }
+	culture:sao              = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.12 B = 0.174 } }
+	culture:nupe             = { sg_c_faithculture_set_color_effect = { R = 0.6148 G = 0.3996 B = 0.4641 } }
+	culture:saxon            = { sg_c_faithculture_set_color_effect = { R = 0.1961 G = 0.1961 B = 0.1961 } }
+	culture:franconian       = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	culture:swabian          = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	culture:bavarian         = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.3 B = 0.35 } }
+	culture:frisian          = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.3 B = 0.0 } }
+	culture:dutch            = { sg_c_faithculture_set_color_effect = { R = 0.5798 G = 0.4276 B = 0.2899 } }
+	culture:german           = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	culture:cham             = { sg_c_faithculture_set_color_effect = { R = 0.4392 G = 0.1412 B = 0.8941 } }
+	culture:acehnese         = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.4 B = 0.3 } }
+	culture:han              = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.0 B = 0.0 } }
+	culture:hlai             = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	culture:yi               = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.45 } }
+	culture:bai              = { sg_c_faithculture_set_color_effect = { R = 0.8357 G = 0.3714 B = 0.0929 } }
+	culture:gothic           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.2 B = 0.1 } }
+	culture:ancient_egyptian = { sg_c_faithculture_set_color_effect = { R = 0.4991 G = 0.4713 B = 0.0943 } }
+	culture:hebrew           = { sg_c_faithculture_set_color_effect = { R = 0.12 G = 0.5294 B = 0.6353 } }
+	culture:hunnic           = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.21 B = 0.13 } }
+	culture:trojan           = { sg_c_faithculture_set_color_effect = { R = 0.585 G = 0.3877 B = 0.6696 } }
+	culture:macedonian       = { sg_c_faithculture_set_color_effect = { R = 0.4872 G = 0.4176 B = 0.6612 } }
+	culture:carthaginian     = { sg_c_faithculture_set_color_effect = { R = 0.4872 G = 0.4176 B = 0.6612 } }
+	culture:tamil            = { sg_c_faithculture_set_color_effect = { R = 0.6184 G = 0.4329 B = 0.1237 } }
+	culture:telugu           = { sg_c_faithculture_set_color_effect = { R = 0.485 G = 0.485 B = 0.0 } }
+	culture:kannada          = { sg_c_faithculture_set_color_effect = { R = 0.6008 G = 0.4506 B = 0.0 } }
+	culture:gond             = { sg_c_faithculture_set_color_effect = { R = 0.5314 G = 0.4605 B = 0.1063 } }
+	culture:ethiopian        = { sg_c_faithculture_set_color_effect = { R = 0.5169 G = 0.4703 B = 0.0517 } }
+	culture:nubian           = { sg_c_faithculture_set_color_effect = { R = 0.5962 G = 0.446 B = 0.0596 } }
+	culture:welayta          = { sg_c_faithculture_set_color_effect = { R = 0.4343 G = 0.44 B = 0.154 } }
+	culture:daju             = { sg_c_faithculture_set_color_effect = { R = 0.4716 G = 0.4793 B = 0.0959 } }
+	culture:beja             = { sg_c_faithculture_set_color_effect = { R = 0.1926 G = 0.5071 B = 0.642 } }
+	culture:russian          = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.4 B = 0.1 } }
+	culture:ilmenian         = { sg_c_faithculture_set_color_effect = { R = 0.3755 G = 0.5007 B = 0.1669 } }
+	culture:severian         = { sg_c_faithculture_set_color_effect = { R = 0.3214 G = 0.5142 B = 0.1928 } }
+	culture:volhynian        = { sg_c_faithculture_set_color_effect = { R = 0.3996 G = 0.4918 B = 0.1844 } }
+	culture:frankish         = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.3 B = 0.5 } }
+	culture:french           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.1 B = 0.6 } }
+	culture:norman           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.2 B = 0.4 } }
+	culture:occitan          = { sg_c_faithculture_set_color_effect = { R = 0.0776 G = 0.5434 B = 0.6211 } }
+	culture:irish            = { sg_c_faithculture_set_color_effect = { R = 0.0796 G = 0.5688 B = 0.3634 } }
+	culture:gaelic           = { sg_c_faithculture_set_color_effect = { R = 0.0556 G = 0.5565 B = 0.5565 } }
+	culture:hmong            = { sg_c_faithculture_set_color_effect = { R = 0.1554 G = 0.5438 B = 0.3884 } }
+	culture:yao              = { sg_c_faithculture_set_color_effect = { R = 0.346 G = 0.4844 B = 0.4152 } }
+	culture:andalusian       = { sg_c_faithculture_set_color_effect = { R = 0.3452 G = 0.5179 B = 0.0863 } }
+	culture:basque           = { sg_c_faithculture_set_color_effect = { R = 0.55 G = 0.42 B = 0.04 } }
+	culture:castilian        = { sg_c_faithculture_set_color_effect = { R = 0.5378 G = 0.4642 B = 0.0509 } }
+	culture:catalan          = { sg_c_faithculture_set_color_effect = { R = 0.7312 G = 0.4041 B = 0.077 } }
+	culture:portuguese       = { sg_c_faithculture_set_color_effect = { R = 0.5243 G = 0.4684 B = 0.0489 } }
+	culture:visigothic       = { sg_c_faithculture_set_color_effect = { R = 0.4749 G = 0.4749 B = 0.1295 } }
+	culture:galician         = { sg_c_faithculture_set_color_effect = { R = 0.4568 G = 0.4618 B = 0.3128 } }
+	culture:asturleonese     = { sg_c_faithculture_set_color_effect = { R = 0.5236 G = 0.4541 B = 0.1923 } }
+	culture:aragonese        = { sg_c_faithculture_set_color_effect = { R = 0.5401 G = 0.4523 B = 0.162 } }
+	culture:suebi            = { sg_c_faithculture_set_color_effect = { R = 0.5146 G = 0.4503 B = 0.2573 } }
+	culture:bengali          = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.4706 B = 0.1569 } }
+	culture:oriya            = { sg_c_faithculture_set_color_effect = { R = 0.7892 G = 0.3946 B = 0.0 } }
+	culture:assamese         = { sg_c_faithculture_set_color_effect = { R = 0.65 G = 0.25 B = 0.1 } }
+	culture:hindustani       = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.0 B = 0.0 } }
+	culture:gujarati         = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.2 B = 0.2 } }
+	culture:punjabi          = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.2 } }
+	culture:rajput           = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.0 B = 0.0 } }
+	culture:malvi            = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.05 B = 0.05 } }
+	culture:sindhi           = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.2 B = 0.0 } }
+	culture:marathi          = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.2 B = 0.0 } }
+	culture:kashmiri         = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.4 B = 0.3 } }
+	culture:sinhala          = { sg_c_faithculture_set_color_effect = { R = 1.0 G = 0.3 B = 0.3 } }
+	culture:nepali           = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.3 B = 0.0 } }
+	culture:brahui           = { sg_c_faithculture_set_color_effect = { R = 0.853 G = 0.3412 B = 0.3412 } }
+	culture:persian          = { sg_c_faithculture_set_color_effect = { R = 0.0886 G = 0.5313 B = 0.7085 } }
+	culture:kurdish          = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.5834 B = 0.4537 } }
+	culture:baloch           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.15 B = 0.5 } }
+	culture:daylamite        = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.35 B = 0.6 } }
+	culture:tajik            = { sg_c_faithculture_set_color_effect = { R = 0.4845 G = 0.4153 B = 0.6922 } }
+	culture:afghan           = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.3 B = 1.0 } }
+	culture:saka             = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.3 B = 1.0 } }
+	culture:sogdian          = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.3 B = 0.9 } }
+	culture:khwarezmian      = { sg_c_faithculture_set_color_effect = { R = 0.3108 G = 0.4662 B = 0.6993 } }
+	culture:tocharian        = { sg_c_faithculture_set_color_effect = { R = 0.2863 G = 0.4784 B = 0.2745 } }
+	culture:alan             = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.3 B = 0.7 } }
+	culture:ashkenazi        = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.3 B = 0.6 } }
+	culture:sephardi         = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.2 B = 0.7 } }
+	culture:radhanite        = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.2 B = 0.7 } }
+	culture:kochinim         = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.2 B = 0.8 } }
+	culture:bavlim           = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.3 B = 0.7 } }
+	culture:japanese         = { sg_c_faithculture_set_color_effect = { R = 0.7961 G = 0.3122 B = 0.7961 } }
+	culture:emishi           = { sg_c_faithculture_set_color_effect = { R = 0.6266 G = 0.4132 B = 0.2947 } }
+	culture:ainu             = { sg_c_faithculture_set_color_effect = { R = 0.2745 G = 0.1765 B = 0.0784 } }
+	culture:ryukyuan         = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.05 B = 0.05 } }
+	culture:khmer            = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.3 B = 0.7 } }
+	culture:khmu             = { sg_c_faithculture_set_color_effect = { R = 0.1798 G = 0.5394 B = 0.3596 } }
+	culture:mon              = { sg_c_faithculture_set_color_effect = { R = 0.3084 G = 0.5286 B = 0.0881 } }
+	culture:goryeo           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.3 B = 0.7 } }
+	culture:silla            = { sg_c_faithculture_set_color_effect = { R = 0.47 G = 0.18 B = 0.16 } }
+	culture:baekje           = { sg_c_faithculture_set_color_effect = { R = 0.2825 G = 0.5085 B = 0.3632 } }
+	culture:goguryeo         = { sg_c_faithculture_set_color_effect = { R = 0.22 G = 0.33 B = 0.75 } }
+	culture:balhae           = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.0 B = 0.3 } }
+	culture:italian          = { sg_c_faithculture_set_color_effect = { R = 0.4569 G = 0.4569 B = 0.3607 } }
+	culture:roman            = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.1 B = 0.1 } }
+	culture:cisalpine        = { sg_c_faithculture_set_color_effect = { R = 0.4641 G = 0.4641 B = 0.2687 } }
+	culture:sardinian        = { sg_c_faithculture_set_color_effect = { R = 0.4728 G = 0.4728 B = 0.1576 } }
+	culture:sicilian         = { sg_c_faithculture_set_color_effect = { R = 0.4737 G = 0.4737 B = 0.1457 } }
+	culture:lombard          = { sg_c_faithculture_set_color_effect = { R = 0.4625 G = 0.4625 B = 0.2891 } }
+	culture:langobard        = { sg_c_faithculture_set_color_effect = { R = 0.4618 G = 0.4618 B = 0.2988 } }
+	culture:mogyer           = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.4 B = 0.1 } }
+	culture:hungarian        = { sg_c_faithculture_set_color_effect = { R = 0.4039 G = 0.4847 B = 0.2423 } }
+	culture:javanese         = { sg_c_faithculture_set_color_effect = { R = 0.9 G = 0.25 B = 0.0 } }
+	culture:malay            = { sg_c_faithculture_set_color_effect = { R = 0.7892 G = 0.3946 B = 0.0 } }
+	culture:senoi            = { sg_c_faithculture_set_color_effect = { R = 0.3781 G = 0.5041 B = 0.126 } }
+	culture:dayak            = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.4 B = 0.9 } }
+	culture:bisayan          = { sg_c_faithculture_set_color_effect = { R = 0.9 G = 0.1 B = 0.3 } }
+	culture:tagalog          = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.3 B = 0.7 } }
+	culture:iloko            = { sg_c_faithculture_set_color_effect = { R = 0.7892 G = 0.3946 B = 0.0 } }
+	culture:bugis            = { sg_c_faithculture_set_color_effect = { R = 0.0 G = 0.4118 B = 0.5725 } }
+	culture:toraja           = { sg_c_faithculture_set_color_effect = { R = 0.3282 G = 0.4821 B = 0.4903 } }
+	culture:maluku           = { sg_c_faithculture_set_color_effect = { R = 0.2098 G = 0.5245 B = 0.4196 } }
+	culture:papuan           = { sg_c_faithculture_set_color_effect = { R = 0.7503 G = 0.3972 B = 0.0883 } }
+	culture:amis             = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.5 B = 0.3 } }
+	culture:mongol           = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.4 B = 1.0 } }
+	culture:buryat           = { sg_c_faithculture_set_color_effect = { R = 0.1 G = 0.1 B = 0.8 } }
+	culture:oirat            = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.2 B = 1.0 } }
+	culture:naiman           = { sg_c_faithculture_set_color_effect = { R = 0.3655 G = 0.4467 B = 0.731 } }
+	culture:kerait           = { sg_c_faithculture_set_color_effect = { R = 0.3108 G = 0.4662 B = 0.6993 } }
+	culture:khitan           = { sg_c_faithculture_set_color_effect = { R = 0.1765 G = 0.1922 B = 0.4196 } }
+	culture:shiwei           = { sg_c_faithculture_set_color_effect = { R = 0.23 G = 0.15 B = 0.8 } }
+	culture:tuyuhun          = { sg_c_faithculture_set_color_effect = { R = 0.7518 G = 0.3685 B = 0.3685 } }
+	culture:nakkavaram       = { sg_c_faithculture_set_color_effect = { R = 0.2516 G = 0.5032 B = 0.5075 } }
+	culture:norse            = { sg_c_faithculture_set_color_effect = { R = 0.2622 G = 0.4807 B = 0.6992 } }
+	culture:swedish          = { sg_c_faithculture_set_color_effect = { R = 0.242 G = 0.484 B = 0.726 } }
+	culture:norwegian        = { sg_c_faithculture_set_color_effect = { R = 0.5548 G = 0.3963 B = 0.6737 } }
+	culture:danish           = { sg_c_faithculture_set_color_effect = { R = 0.15 G = 0.4 B = 0.55 } }
+	culture:tangut           = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.0 } }
+	culture:qiang            = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.2 B = 0.2 } }
+	culture:soninke          = { sg_c_faithculture_set_color_effect = { R = 0.5255 G = 0.473 B = 0.0 } }
+	culture:bozo             = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.36 B = 0.0 } }
+	culture:mossi            = { sg_c_faithculture_set_color_effect = { R = 0.8772 G = 0.3684 B = 0.0 } }
+	culture:sorko            = { sg_c_faithculture_set_color_effect = { R = 0.4842 G = 0.4706 B = 0.1452 } }
+	culture:gaw              = { sg_c_faithculture_set_color_effect = { R = 0.4863 G = 0.4552 B = 0.2918 } }
+	culture:songhai          = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.2 B = 0.4 } }
+	culture:pulaar           = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.45 B = 0.35 } }
+	culture:serer            = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.45 B = 0.3 } }
+	culture:wolof            = { sg_c_faithculture_set_color_effect = { R = 0.42 G = 0.43 B = 0.25 } }
+	culture:somali           = { sg_c_faithculture_set_color_effect = { R = 0.06 G = 0.156 B = 0.3 } }
+	culture:afar             = { sg_c_faithculture_set_color_effect = { R = 0.07 G = 0.322 B = 0.7 } }
+	culture:croatian         = { sg_c_faithculture_set_color_effect = { R = 0.4 G = 0.2 B = 0.2 } }
+	culture:bosnian          = { sg_c_faithculture_set_color_effect = { R = 0.3 G = 0.1 B = 0.1 } }
+	culture:serbian          = { sg_c_faithculture_set_color_effect = { R = 0.36 G = 0.1 B = 0.04 } }
+	culture:bulgarian        = { sg_c_faithculture_set_color_effect = { R = 0.5806 G = 0.4147 B = 0.4147 } }
+	culture:albanian         = { sg_c_faithculture_set_color_effect = { R = 0.4697 G = 0.4404 B = 0.4873 } }
+	culture:assyrian         = { sg_c_faithculture_set_color_effect = { R = 0.4577 G = 0.4633 B = 0.2958 } }
+	culture:tai              = { sg_c_faithculture_set_color_effect = { R = 0.4385 G = 0.4933 B = 0.0548 } }
+	culture:bouxcuengh       = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.45 B = 0.2 } }
+	culture:bodpa            = { sg_c_faithculture_set_color_effect = { R = 0.1961 G = 0.1961 B = 0.1961 } }
+	culture:zhangzhung       = { sg_c_faithculture_set_color_effect = { R = 0.3922 G = 0.3529 B = 0.2745 } }
+	culture:sumpa            = { sg_c_faithculture_set_color_effect = { R = 0.3529 G = 0.3529 B = 0.4902 } }
+	culture:tsangpa          = { sg_c_faithculture_set_color_effect = { R = 0.2941 G = 0.3922 B = 0.3922 } }
+	culture:kirati           = { sg_c_faithculture_set_color_effect = { R = 0.9078 G = 0.3477 B = 0.1159 } }
+	culture:lhomon           = { sg_c_faithculture_set_color_effect = { R = 0.4673 G = 0.4453 B = 0.4453 } }
+	culture:tujia            = { sg_c_faithculture_set_color_effect = { R = 0.3698 G = 0.4878 B = 0.3121 } }
+	culture:jurchen          = { sg_c_faithculture_set_color_effect = { R = 0.6054 G = 0.448 B = 0.0121 } }
+	culture:mohe             = { sg_c_faithculture_set_color_effect = { R = 0.549 G = 0.4314 B = 0.1373 } }
+	culture:turkish          = { sg_c_faithculture_set_color_effect = { R = 0.6876 G = 0.418 B = 0.0674 } }
+	culture:pecheneg         = { sg_c_faithculture_set_color_effect = { R = 0.5008 G = 0.4655 B = 0.1473 } }
+	culture:cuman            = { sg_c_faithculture_set_color_effect = { R = 0.5597 G = 0.4478 B = 0.1493 } }
+	culture:khazar           = { sg_c_faithculture_set_color_effect = { R = 0.6592 G = 0.4237 B = 0.0942 } }
+	culture:bolghar          = { sg_c_faithculture_set_color_effect = { R = 0.5223 G = 0.4406 B = 0.3304 } }
+	culture:bashkir          = { sg_c_faithculture_set_color_effect = { R = 0.4627 G = 0.349 B = 0.2 } }
+	culture:avar             = { sg_c_faithculture_set_color_effect = { R = 0.4694 G = 0.4694 B = 0.2012 } }
+	culture:karluk           = { sg_c_faithculture_set_color_effect = { R = 0.7129 G = 0.3967 B = 0.2041 } }
+	culture:kimek            = { sg_c_faithculture_set_color_effect = { R = 0.5511 G = 0.4592 B = 0.0612 } }
+	culture:kipchak          = { sg_c_faithculture_set_color_effect = { R = 0.5099 G = 0.4636 B = 0.1391 } }
+	culture:laktan           = { sg_c_faithculture_set_color_effect = { R = 0.55 G = 0.45 B = 0.1 } }
+	culture:kirghiz          = { sg_c_faithculture_set_color_effect = { R = 0.5332 G = 0.4517 B = 0.1882 } }
+	culture:uyghur           = { sg_c_faithculture_set_color_effect = { R = 0.5078 G = 0.4481 B = 0.2987 } }
+	culture:yughur           = { sg_c_faithculture_set_color_effect = { R = 0.3412 G = 0.4986 B = 0.2887 } }
+	culture:uriankhai        = { sg_c_faithculture_set_color_effect = { R = 0.4396 G = 0.4689 B = 0.2931 } }
+	culture:chuvash          = { sg_c_faithculture_set_color_effect = { R = 0.573 G = 0.4093 B = 0.4911 } }
+	culture:shatuo           = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.3 B = 0.2 } }
+	culture:ongud            = { sg_c_faithculture_set_color_effect = { R = 0.65 G = 0.4 B = 0.15 } }
+	culture:turkmen          = { sg_c_faithculture_set_color_effect = { R = 0.7769 G = 0.3885 B = 0.0971 } }
+	culture:kazak            = { sg_c_faithculture_set_color_effect = { R = 0.765 G = 0.3825 B = 0.1912 } }
+	culture:komi             = { sg_c_faithculture_set_color_effect = { R = 0.3405 G = 0.5108 B = 0.1703 } }
+	culture:khanty           = { sg_c_faithculture_set_color_effect = { R = 0.3189 G = 0.5183 B = 0.1595 } }
+	culture:samoyed          = { sg_c_faithculture_set_color_effect = { R = 0.1925 G = 0.5584 B = 0.1348 } }
+	culture:viet             = { sg_c_faithculture_set_color_effect = { R = 0.7 G = 0.3 B = 0.5 } }
+	culture:vlach            = { sg_c_faithculture_set_color_effect = { R = 0.6 G = 0.3 B = 0.8 } }
+	culture:mordvin          = { sg_c_faithculture_set_color_effect = { R = 0.45 G = 0.35 B = 0.8 } }
+	culture:merya            = { sg_c_faithculture_set_color_effect = { R = 0.2401 G = 0.4802 B = 0.7684 } }
+	culture:meshchera        = { sg_c_faithculture_set_color_effect = { R = 0.35 G = 0.4 B = 0.8 } }
+	culture:mari             = { sg_c_faithculture_set_color_effect = { R = 0.3679 G = 0.4497 B = 0.6949 } }
+	culture:muroma           = { sg_c_faithculture_set_color_effect = { R = 0.2 G = 0.3 B = 0.6 } }
+	culture:malinke          = { sg_c_faithculture_set_color_effect = { R = 0.1798 G = 0.1958 B = 0.58 } }
+	culture:bobo             = { sg_c_faithculture_set_color_effect = { R = 0.042 G = 0.3842 B = 0.7 } }
+	culture:gur              = { sg_c_faithculture_set_color_effect = { R = 0.07 G = 0.2464 B = 0.7 } }
+	culture:marka            = { sg_c_faithculture_set_color_effect = { R = 0.098 G = 0.098 B = 1.0 } }
+	culture:mel              = { sg_c_faithculture_set_color_effect = { R = 0.3019 G = 0.4717 B = 0.671 } }
+	culture:english          = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.2 B = 0.2 } }
+	culture:anglo_saxon      = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.3 B = 0.3 } }
+	culture:old_saxon        = { sg_c_faithculture_set_color_effect = { R = 0.5 G = 0.1 B = 0.1 } }
+	culture:scottish         = { sg_c_faithculture_set_color_effect = { R = 0.8 G = 0.2944 B = 0.16 } }
+	culture:pommeranian      = { sg_c_faithculture_set_color_effect = { R = 0.2587 G = 0.5175 B = 0.345 } }
+	culture:czech            = { sg_c_faithculture_set_color_effect = { R = 0.1383 G = 0.5532 B = 0.3457 } }
+	culture:polish           = { sg_c_faithculture_set_color_effect = { R = 0.2518 G = 0.5035 B = 0.5035 } }
+	culture:polabian         = { sg_c_faithculture_set_color_effect = { R = 0.2797 G = 0.4896 B = 0.5595 } }
+	culture:slovien          = { sg_c_faithculture_set_color_effect = { R = 0.2552 G = 0.5104 B = 0.4253 } }
+	culture:carantanian      = { sg_c_faithculture_set_color_effect = { R = 0.311 G = 0.5054 B = 0.311 } }
+	culture:yoruba           = { sg_c_faithculture_set_color_effect = { R = 0.1615 G = 0.5383 B = 0.4252 } }
+	culture:edo              = { sg_c_faithculture_set_color_effect = { R = 0.2613 G = 0.5225 B = 0.2874 } }
+	culture:igbo             = { sg_c_faithculture_set_color_effect = { R = 0.1147 G = 0.5733 B = 0.2156 } }
+	culture:ewe              = { sg_c_faithculture_set_color_effect = { R = 0.102 G = 0.5929 B = 0.0593 } }
+
+}
