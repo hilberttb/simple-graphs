@@ -71,8 +71,9 @@ That `.mod` file lives outside the repository and is not tracked here. Enable
 
 ## Using it
 
-1. Start a new campaign. A button reading **County graph** sits near the
-   top-left of the screen, floating over the map.
+1. Start a new campaign. A small round button showing a rising line sits in the
+   top-right, immediately left of the **Outliner** button. Hover it for a
+   tooltip.
 2. Click it to open the window; click it again, or **Close**, to dismiss it.
    The window is draggable.
 3. The right-hand column lists every faith and every culture that has ever held

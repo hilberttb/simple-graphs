@@ -565,7 +565,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_faith' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' )]"
 
 			item = {
@@ -600,7 +607,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_culture' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' )]"
 
 			item = {
@@ -640,7 +654,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_faith' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' )]"
 
 			item = {
@@ -669,7 +690,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_culture' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' )]"
 
 			item = {
@@ -756,7 +784,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_faith' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_years' )]"
 
 			item = {
@@ -784,7 +819,14 @@ window = {
 			size = { 100% 100% }
 			allow_outside = yes
 
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			# Gated on the SEGMENT count, not just on "something is selected".
+			# Zero segments means no line was drawn, and a y/x label with no line
+			# under it is an annotation of nothing - which is exactly what a
+			# one-snapshot campaign used to show. N snapshots give N-1 segments,
+			# so this is false for both the "no snapshots yet" and the "only one
+			# snapshot" cases, and stays false for an object whose OWN history is
+			# one point long even when the campaign's is fifty.
+			visible = "[And( GetGlobalVariable( 'sg_selected_culture' ).IsSet, GreaterThan_int32( GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) ), '(int32)0' ) )]"
 			datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_years' )]"
 
 			item = {
@@ -1059,8 +1101,13 @@ window = {
 											# - counties now, plain points, segments - are parked in
 											# sg_debug_widgets.gui.bak with the rest of the debug readouts.
 											# A picker row is just a name now.
+											# x 10, not 0. At 0 the name sits hard against the button's own
+											# frame with no breathing room, so the row reads as clipped rather
+											# than as indented. This is INSIDE the button, so it is separate
+											# from the margin_left = 20 above, which indents the whole row
+											# under its group header.
 											text_single = {
-												position = { 0 0 }
+												position = { 10 0 }
 												text = "[Faith.GetNameNoTooltip]"
 												alwaystransparent = yes
 											}
@@ -1140,8 +1187,13 @@ window = {
 											# - counties now, plain points, segments - are parked in
 											# sg_debug_widgets.gui.bak with the rest of the debug readouts.
 											# A picker row is just a name now.
+											# x 10, not 0. At 0 the name sits hard against the button's own
+											# frame with no breathing room, so the row reads as clipped rather
+											# than as indented. This is INSIDE the button, so it is separate
+											# from the margin_left = 20 above, which indents the whole row
+											# under its group header.
 											text_single = {
-												position = { 0 0 }
+												position = { 10 0 }
 												text = "[Culture.GetNameNoTooltip]"
 												alwaystransparent = yes
 											}

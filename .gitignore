@@ -2,6 +2,7 @@
 screenshots/
 README_dump/
 debug_and_error_dump_collection/
+icon_mockups/
 
 # Files
 verify_snapshot_totals.py

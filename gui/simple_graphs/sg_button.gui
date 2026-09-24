@@ -1,5 +1,5 @@
 ﻿###############################################################################
-# Simple Graphs - the floating open/close button.
+# Simple Graphs - the open/close button.
 #
 # A free-standing widget registered through gui/scripted_widgets/. It overlays
 # the map; it does not modify, inherit from, or override any vanilla screen.
@@ -12,64 +12,151 @@
 # confirmed present in logs/data_types/data_types_common.txt.
 #
 # ---------------------------------------------------------------------------
-# PLACEMENT - top-left, clear of the two vanilla things that are already there
+# PLACEMENT - immediately left of the Outliner button
 # ---------------------------------------------------------------------------
-# History: top-centre { 0 120 } -> left of the Outliner { -383 120 } -> here.
+# History: top-centre { 0 120 } -> left of the Outliner { -383 120 } -> a wide
+# labelled button at top-left { 104 41 } -> here, as a round icon button with
+# no text at all.
 #
-# Now TOP-LEFT, anchored to the left edge so the gap is a real margin at any
-# resolution rather than a number tuned against one screen.
+# It is measured off the vanilla Outliner button rather than tuned against one
+# screen, so it holds at any resolution:
 #
-# THE TOP BAR IS NOT A CONSTRAINT ON THIS SIDE. Its container is declared
-# `size = { 100% 88 }` at `position = { 0 -24 }` (hud.gui), i.e. nominally the
-# full screen width down to about y = 64 - but the bar only actually DRAWS on
-# the right, so the top-left is clear. Do not reintroduce that 64 as a floor
-# here; it was measured off the declared container, not off anything visible.
+#   Outliner   container  parentanchor = top|right  position = { -5 55 }
+#              button_round  size = { 35 35 }                    hud.gui:293-301
+#              i.e. it occupies x right-40 .. right-5, y 55 .. 90
 #
-# The leftmost slot is taken, so this button sits BESIDE its occupant rather
-# than in the corner itself. That occupant is the RULER OBJECTIVES button:
-#     container     parentanchor = top|left  position = { 8 16 }   hud.gui:256-259
-#     button_round  size = { 84 84 }                               hud.gui:263-265
-# i.e. x 8..92, y 16..100. It is conditional - it needs
-# GetPlayersRulerObjectiveDecision.IsValid and the objective view closed - so
-# it may well never have been seen on a given save, but it is a normal thing to
-# have active and it is cheap to sit clear of it.
+#   this       position = { -46 55 }  size = { 35 35 }
+#              i.e. x right-81 .. right-46, y 55 .. 90
 #
-#   x = 104   12px to the right of that button's right edge (92).
-#   y = 41    vertically CENTRED on it: 16 + (84 - 34) / 2. The two then read
-#             as a row rather than as two things that happen to be near
-#             each other.
+# 35x35 and y = 55 are the Outliner's own numbers, so the two sit as a row at
+# the same height and the same size. The 6px gap between them (46 - 40) is the
+# only invented number here.
 #
-# If the ruler objective button is absent, this simply sits alone near the
-# top-left with a 104px inset, which is the intended look either way.
+# WHY NOT THE BOTTOM BAR, WHICH WAS INVESTIGATED FIRST
+# ----------------------------------------------------
+# The bottom-right cluster - dots, pause menu, encyclopedia, ledger - is an
+# hbox inside hud.gui (:1108). There is no `block` in it, so the only way to
+# add a child is to ship a whole gui/hud.gui, which two of the 28 installed
+# workshop mods already do; GUI is first-in-only-served, so two mods doing that
+# means one of them silently loses. It would also cost this mod its "touches no
+# vanilla file" property and need re-merging every patch.
 #
-# ONE TRANSIENT OVERLAP, ACCEPTED. Clicking that round button opens the ruler
-# objective PANEL, which is `parentanchor = top|left  position = { 16 24 }`
-# `size = { 512 768 }` (hud_ruler_objective.gui:11-13) - it blankets the whole
-# top-left corner, so it covers this button while open no matter where in that
-# corner this sits. Nothing to design around: the round button itself hides
-# while that view is open, and the panel is something the player opened.
+# The apparent gap left of the map-mode buttons is not free either. It is the
+# left half of a right-anchored flowcontainer (hud.gui:2011, spacing 30,
+# ignoreinvisible = yes) whose other member is "in_progress_systems" - the tray
+# that fills with the travel button, an involved activity, exposed schemes,
+# inspirations, task contracts, a diarchy, the dynastic cycle and epidemic
+# alerts. It is empty only when none of those apply, and it grows LEFTWARDS
+# from the map modes, i.e. straight through anything parked there.
+#
+# ACCEPTED: the Outliner panel covers this button when open. That was a
+# deliberate choice - occlusion rather than a `Not(IsRightWindowOpen)` guard,
+# which is what the Outliner button itself uses to hide. Being covered by a
+# window the player just opened is normal; vanishing is the failure mode that
+# looks like a bug.
+#
+# ---------------------------------------------------------------------------
+# THE ICON IS TWO CHECKMARKS, AND THAT IS NOT A JOKE
+# ---------------------------------------------------------------------------
+# CK3 has no line-graph icon. A sweep of the 258-icon flat set turns up exactly
+# one chart of any kind, gfx/interface/icons/flat_icons/ledger.dds, which is an
+# ascending BAR chart and is already on screen as vanilla's own ledger button in
+# the bottom-right cluster. Everything else that sounds right is something else:
+# history.dds is an open book, county_change.dds a shield, data_system.dds a
+# pair of square brackets, time.dds an hourglass.
+#
+# icon_check.dds is a short down-stroke followed by a long up-stroke. Two of
+# them, OVERLAPPED and with the second raised, fuse into a single rising zigzag
+# that reads as a plotted line - which is precisely what this mod draws. Placed
+# side by side without the overlap they read as two checkmarks and nothing
+# else; the overlap is what does the work.
+#
+#   size 17          each tick. The texture is 60x60 with the ink occupying
+#                    51x40 of it (85% x 67%), so a pair at 17 covers about
+#                    25x16 - the same share of a 35px button that the
+#                    Outliner's own 25x25 glyph takes.
+#   +-6 / -+3        half the tick-to-tick offset, applied in opposite
+#                    directions from centre so the PAIR is centred rather than
+#                    the first tick. Derived from the mock-up that was chosen:
+#                    offset 0.65 of tick size across, 0.29 up.
+#
+# alwaystransparent on both, so the glyph never swallows a click - the same
+# thing vanilla does to the Outliner's inner button (hud.gui:323-326).
+#
+# NOT MIRRORED. `mirror = horizontal` and `mirror = vertical` are both ordinary
+# (282 and 135 vanilla uses, and they combine), and a mirrored second tick was
+# tried - it gives a V-then-inverted-V that reads as a zigzag but not as a
+# trend. Two unmirrored ticks stepping upwards was the version picked.
+#
+# ---------------------------------------------------------------------------
+# VISIBILITY
+# ---------------------------------------------------------------------------
+# Three predicates, up from one. The old comment here argued for exactly one on
+# the grounds that every extra condition is another way for the button to
+# silently not appear - which was the right call while the button was the thing
+# being debugged, and is the wrong call now that it is furniture sitting inside
+# vanilla's own. These three are all "is the normal HUD on screen":
+#
+#   IsInGame            not the frontend
+#   IsDefaultGUIMode    not the barbershop, the ruler designer, or any other
+#                       mode that replaces the HUD wholesale
+#   Not(IsPauseMenuShown)
+#
+# All three are used by the Outliner button's own guard. What is deliberately
+# NOT copied from it is Not(IsRightWindowOpen) - see ACCEPTED above.
 ###############################################################################
 
 widget = {
 	name = "sg_toggle_button"
 	datacontext = "[GetVariableSystem]"
 
-	parentanchor = top|left
-	position = { 104 41 }
-	size = { 220 34 }
+	parentanchor = top|right
+	position = { -46 55 }
+	size = { 35 35 }
 	layer = middle
 	allow_outside = yes
 
-	# Kept to one predicate on purpose. IsDefaultGUIMode would also be
-	# reasonable here (the HRT workshop mod pairs the two) but every extra
-	# condition is another way for the button to silently not appear, and
-	# this prototype wants the button findable above all else.
-	visible = "[IsInGame]"
+	visible = "[And( IsInGame, And( IsDefaultGUIMode, Not( IsPauseMenuShown ) ) )]"
 
-	button_standard = {
+	button_round = {
 		name = "sg_toggle_button_press"
-		size = { 220 34 }
-		text = "SG_C_FC_OPEN_BUTTON"
+		size = { 35 35 }
+		alpha = 0.7
+
 		onclick = "[GetVariableSystem.Toggle( 'sg_window_open' )]"
+		tooltip = "SG_C_FC_OPEN_BUTTON"
+
+		# The idle/hover alpha pair is the Outliner button's, verbatim
+		# (hud.gui:308-321), so the two fade together and read as one row.
+		state = {
+			name = _mouse_enter
+			alpha = 1
+			duration = 0.2
+			using = Animation_Curve_Default
+		}
+
+		state = {
+			name = _mouse_leave
+			alpha = 0.7
+			duration = 0.7
+			using = Animation_Curve_Default
+		}
+
+		# --- the fake line graph, left tick then right tick ---
+		icon = {
+			parentanchor = center
+			position = { -6 3 }
+			size = { 17 17 }
+			texture = "gfx/interface/icons/symbols/icon_check.dds"
+			alwaystransparent = yes
+		}
+
+		icon = {
+			parentanchor = center
+			position = { 6 -3 }
+			size = { 17 17 }
+			texture = "gfx/interface/icons/symbols/icon_check.dds"
+			alwaystransparent = yes
+		}
 	}
 }
