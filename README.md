@@ -9,10 +9,13 @@ own window.
 There is no vanilla or mod precedent (as far as I could find) in CK3 for rendering a numeric time series.
 This builds one out of the primitives the engine happens to expose.
 
-**Status:** This is primarily a proof of concept. It is usable in-game but not polished.
-Data collection, the picker and the plot all function.
-The presentation is deliberately plain so far. Multiple graphs
-in one window, real axes, and colors will be present in the full version.
+**Status:** Still a proof of concept, but no longer a plain one. Data collection,
+the picker and the plot all function, the graph is drawn on a paper background,
+and every faith and culture plots in **its own colour**, taken from the colour
+the game itself gives it on the map.
+
+Still to come: a real y axis with numbering and gridlines, an auto-adjusting
+y scale, and more than one series on screen at once.
 
 ---
 
@@ -55,7 +58,7 @@ It sits alongside a launcher descriptor `mod/simple-graphs.mod` (not to be confu
 `descriptor.mod` which is included in this repo) that points at it:
 
 ```
-version="0.1.0"
+version="0.2.0"
 name="Simple Graphs"
 supported_version="1.19.*"
 path="<absolute path to the mod folder>"
@@ -73,12 +76,17 @@ That `.mod` file lives outside the repository and is not tracked here. Enable
 2. Click it to open the window; click it again, or **Close**, to dismiss it.
    The window is draggable.
 3. The right-hand column lists every faith and every culture that has ever held
-   at least one county. Click any row to plot it. Faiths sit under a header for
-   their **religion**, cultures under a header for their **heritage**, the way
-   the ruler designer groups its own two lists.
-4. The left-hand column shows the selected series: its name, the plot, counters,
-   and two number tables that decode the stored data with the same expressions
-   the line itself uses.
+   at least one county, with the current selection named above the list. Click
+   any row to plot it. Faiths sit under a header for their **religion**,
+   cultures under a header for their **heritage**, the way the ruler designer
+   groups its own two lists.
+4. The left-hand half is a sheet of paper carrying the graph and nothing else.
+   The plot is centred on it, with the county count at each end of the line and
+   in-game years along the bottom.
+
+If the plot is empty, it says why in the middle of the sheet: either there is no
+played character (see above) or the campaign has not taken two snapshots yet,
+which is the minimum a line needs.
 
 The first snapshot fires automatically on the first in-game day. Every later one
 fires exactly one year later, on the same calendar day, indefinitely.
@@ -90,6 +98,25 @@ Oldest snapshot at the left; higher means more counties. A series needs **two**
 snapshots before any line appears. An object that came into existence mid-campaign
 correctly starts its line where it started existing.
 
+### Colours
+
+Each faith and culture plots in its own colour, the one the game gives it on the
+map. CK3 does not expose that colour to a mod at runtime - nothing on `Faith`,
+`Culture`, `Religion` or any related type returns one, and no effect or trigger
+reads one - so the mod ships a table generated from the game's own
+`religion_types/` and `cultures/` files: 140 faiths and 244 cultures.
+
+Two consequences worth knowing:
+
+- **The colours are darkened.** Map colours are picked to be told apart as large
+  filled areas, and over half of them are lighter than the paper the graph is
+  drawn on. Each is scaled down until it is clearly darker than the sheet. Hue
+  and saturation are untouched, so it is the same colour, darker.
+- **Anything the table cannot know gets a palette colour instead** - a faith
+  reformed during the campaign, a hybrid or divergent culture, or anything added
+  by another mod. Twelve colours, handed out in order and then remembered, so an
+  object keeps its colour for the rest of that campaign.
+
 ### Console commands (debug mode)
 
 ```
@@ -99,6 +126,26 @@ effect sg_snapshot_collect_effect = yes
 Forces a snapshot immediately instead of waiting a year. **This is the entry
 point**. Calling `sg_c_faithculture_snapshot_effect` directly would skip the
 engine's counter advance and tag its points with the previous snapshot's index.
+
+```
+effect sg_dump_effect = yes
+effect sg_dump_all_effect = yes
+```
+
+Writes the stored state to `debug.log`, tagged `SIMPLE_GRAPHS_DUMP` so it can be
+grepped out of a log that also has snapshot traffic. The first dumps whatever is
+currently selected in the window; the second dumps every tracked faith and
+culture, needs no selection, and therefore works in Observer mode too. Both
+begin with the snapshot number the figures belong to.
+
+One line per object: this snapshot's county count, the sizes of the three stored
+lists, the previous plotted y, and the colour. **Not** one row per stored entry -
+a script effect cannot produce that. Iterating a list of numbers puts CK3 in its
+`value` scope, which cannot execute effects at all, and `debug_log` is an effect.
+The savegame holds every entry in plain text if that level of detail is needed.
+
+This replaces the debug readouts the window used to carry, which are parked in
+`sg_debug_widgets.gui.bak` until they come back behind a debug-mode check.
 
 A burst helper exists for stress testing but is development scaffolding and is
 gitignored, so it may not be present in a checkout:
@@ -124,6 +171,7 @@ Per faith and per culture object, persisted in the savegame:
 | `sg_faithculture_running_count` | Scratch counter for the counting pass |
 | `sg_faithculture_encoded` | Legacy `base + count` value, now only feeding a debug line |
 | `sg_faithculture_ever_tracked` | Sticky "has held a county" marker, gates the picker |
+| `sg_faithculture_color_r` / `_g` / `_b` | This object's plot colour, one 0-1 fraction per channel |
 | `sg_faithculture_group_members` | Variable list, on a **religion** or a delegate culture: that group's picker rows |
 
 Globals:
@@ -139,6 +187,8 @@ Globals:
 | `sg_heritage_registry` | One **culture** per distinct heritage, standing in for it — see below |
 | `sg_religion_registry_count` / `sg_heritage_registry_count` | Sizes, for the debug line |
 | `sg_selected_faith` / `sg_selected_culture` | The current selection. Exactly one is ever set |
+| `sg_color_rotor` | Next palette slot to hand out, for objects with no authored colour |
+| `sg_c_faithculture_colors_stamped` | Set once the authored colour table has been applied to this save |
 
 Entries are **not** raw counts. `add_to_variable_list` de-duplicates by value, so
 a flat series would silently collapse to a single entry. All three encodings exist
@@ -225,7 +275,11 @@ common/
   scripted_effects/
     sg_engine_storage.txt           ENGINE    sg_engine_append_point_effect
     sg_engine_snapshot.txt          ENGINE    snapshot counters, registry helper
+    sg_engine_palette.txt           ENGINE    fallback colour palette + rotor
+    sg_engine_dump.txt              ENGINE    the debug dump's globals line
     sg_c_faithculture_collect.txt   consumer  every_county -> faith/culture
+    sg_c_faithculture_colors.txt    consumer  GENERATED authored-colour table
+    sg_c_faithculture_dump.txt      consumer  sg_dump_effect, sg_dump_all_effect
     sg_wiring.txt                   WIRING    the one file that knows both sides
     sg_dev_burst.txt                dev-only, gitignored
   scripted_guis/
@@ -242,6 +296,16 @@ localization/english/
   sg_engine_l_english.yml           ENGINE
   sg_c_faithculture_l_english.yml   consumer
 ```
+
+`sg_c_faithculture_colors.txt` is generated, not hand-written. It is regenerated
+by a dev script that reads the colours out of the CK3 install, and needs
+re-running after any game update that adds or removes faiths or cultures. A
+faith the table does not know simply falls back to the palette; one the game has
+removed leaves a dangling reference and an `error.log` line.
+
+`sg_debug_widgets.gui.bak` at the repository root holds the debug widgets the
+window used to show. The extension is not `.gui`, so the game never parses it,
+and the root is outside what the build script copies, so it never ships.
 
 Two rules keep that boundary strict.
 
@@ -306,7 +370,7 @@ demonstrated on `landed_title` before being backed out.
 
 ---
 
-## Known limitations (in version 0.1.0)
+## Known limitations (in version 0.2.0)
 
 - **The x axis compresses as snapshots accumulate.** The step auto-fits, so the
   series always fills the 600px plot exactly and can never leave it, however
@@ -332,7 +396,15 @@ demonstrated on `landed_title` before being backed out.
   labels, giving the county count at the first and the last snapshot of the
   selected series, placed at the height of those two points. No ticks, no
   gridlines, no scale in between.
-- **No legend or color.** One series at a time, so far by design.
+- **The y scale is fixed at 0-1000 counties** and does not adapt to the series
+  being shown, so a faith with 20 counties draws as a flat line near the bottom.
+- **No legend, and one series at a time.** Each series has its own colour now,
+  but only one is ever on screen, so there is nothing to tell apart yet.
+- **Colours are not the map colours exactly.** They are darkened so they can be
+  seen on the paper, and objects created during a campaign get a palette colour
+  rather than their own. See "Colours" above.
+- **On a save made before 0.2.0, colours appear on the next snapshot**, not on
+  load. Until then every line draws in the default ink colour.
 - **Performance in a late game is unverified (see more in the performance section).**
 
 ---

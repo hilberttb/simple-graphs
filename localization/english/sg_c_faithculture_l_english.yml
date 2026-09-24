@@ -20,7 +20,27 @@
  sg_c_fc_debug_click_culture:0 "SIMPLE_GRAPHS_CLICK culture [THIS.Culture.GetNameNoTooltip] selected"
  sg_c_fc_debug_registry:0 "SIMPLE_GRAPHS_REGISTRY faiths=[GetGlobalVariable('sg_faith_registry_count').GetValue] cultures=[GetGlobalVariable('sg_culture_registry_count').GetValue] religions=[GetGlobalVariable('sg_religion_registry_count').GetValue] heritages=[GetGlobalVariable('sg_heritage_registry_count').GetValue]"
 
+# One line per object, for sg_dump_effect and sg_dump_all_effect.
+#
+# THESE ARE AGGREGATES, NOT A TABLE OF ENTRIES, and that is an engine limit
+# rather than a decision: the history lists hold numbers, and iterating numbers
+# puts the iterator in the `value` scope, which event_scopes.log:10-15 records as
+# "Execute Effects: no". debug_log is an effect, so nothing can run once per
+# entry. sg_engine_dump.txt has the full reasoning; a savegame has the entries.
+#
+# The sizes come from GetDataModelSize over Scope.GetList, character for character
+# what the window's own counters used before they were parked, so a dumped pts/seg
+# pair and an on-screen one cannot disagree. pts should equal snapshots taken for
+# an object tracked since game start, and seg should be one less.
+ sg_c_fc_dump_faith:0 "SIMPLE_GRAPHS_DUMP faith [THIS.Faith.GetNameNoTooltip] now=[THIS.Var('sg_faithculture_counties_now').GetValue] pts=[GetDataModelSize(THIS.GetList('sg_faithculture_counties'))] seg=[GetDataModelSize(THIS.GetList('sg_faithculture_counties_seg'))] yrs=[GetDataModelSize(THIS.GetList('sg_faithculture_years'))] prev_y=[THIS.Var('sg_faithculture_prev_y').GetValue] rgb=[THIS.Var('sg_faithculture_color_r').GetValue]/[THIS.Var('sg_faithculture_color_g').GetValue]/[THIS.Var('sg_faithculture_color_b').GetValue]"
+ sg_c_fc_dump_culture:0 "SIMPLE_GRAPHS_DUMP culture [THIS.Culture.GetNameNoTooltip] now=[THIS.Var('sg_faithculture_counties_now').GetValue] pts=[GetDataModelSize(THIS.GetList('sg_faithculture_counties'))] seg=[GetDataModelSize(THIS.GetList('sg_faithculture_counties_seg'))] yrs=[GetDataModelSize(THIS.GetList('sg_faithculture_years'))] prev_y=[THIS.Var('sg_faithculture_prev_y').GetValue] rgb=[THIS.Var('sg_faithculture_color_r').GetValue]/[THIS.Var('sg_faithculture_color_g').GetValue]/[THIS.Var('sg_faithculture_color_b').GetValue]"
+
 # ---- window chrome ----------------------------------------------------------
+# SG_C_FC_WINDOW_TITLE and SG_C_FC_LBL_PLAINCOLS are NO LONGER READ by the
+# window. The title went when everything above the graph did; PLAINCOLS belongs
+# to a number table now parked in sg_debug_widgets.gui.bak. Both are kept because
+# the debug readouts are meant to come back behind a debug-mode check, and an
+# unused loc key costs nothing - CK3 only complains about the reverse.
  SG_C_FC_OPEN_BUTTON:0 "County graph"
  SG_C_FC_WINDOW_TITLE:0 "Simple Graphs - county count over time"
  SG_C_FC_LBL_PLAINCOLS:0 "idx / stored value / counties"
@@ -28,11 +48,14 @@
 # ---- the picker -------------------------------------------------------------
 # No faith or culture is named anywhere in the picker - it is driven entirely by
 # the sg_faith_registry / sg_culture_registry registries.
+# SG_C_FC_LBL_PICKER, SG_C_FC_LBL_FAITHCOUNT and SG_C_FC_LBL_CULTCOUNT are also
+# no longer read - the picker column lost its heading and its two counters, and
+# starts straight in on the list under the current selection's name.
  SG_C_FC_LBL_PICKER:0 "PICK ONE - click any row to plot it"
  SG_C_FC_LBL_FAITHCOUNT:0 "faiths:"
  SG_C_FC_LBL_CULTCOUNT:0 "cultures:"
- SG_C_FC_LBL_FAITHCOLS:0 "FAITHS, grouped by religion - click a row. name / counties / pts / seg"
- SG_C_FC_LBL_CULTCOLS:0 "CULTURES, grouped by heritage - click a row. name / counties / pts / seg"
+ SG_C_FC_LBL_FAITHCOLS:0 "FAITHS"
+ SG_C_FC_LBL_CULTCOLS:0 "CULTURES"
 
 # The two group headers. Each is read in the scope of the GROUP OBJECT that the
 # outer datamodel handed the row, which is not the same kind of object on both
@@ -65,10 +88,16 @@
 # ---- the plot ---------------------------------------------------------------
 # Bound to whichever faith or culture was last clicked in the picker.
  SG_C_FC_LBL_SELECTED:0 "SHOWING:"
- SG_C_FC_LBL_NOSEL:0 "nothing selected yet - click a faith or a culture in the list on the right"
- SG_C_FC_LBL_SELPLOT:0 "Counties over time - oldest snapshot at the left, higher means more counties."
+ SG_C_FC_LBL_NOSEL:0 "nothing selected yet"
+
+# Shown in the middle of the empty plot when there IS a played character but the
+# campaign has taken fewer than two snapshots. A series needs two points before
+# any line exists, so in a campaign's first year every selection plots nothing
+# and the blankness has nothing to do with which row was clicked.
+ SG_C_FC_LBL_NEEDSNAPSHOTS:0 "Not enough snapshots taken yet. Wait for the first year to pass or force a snapshot in debug mode."
+ SG_C_FC_LBL_SELPLOT:0 "Counties over time with the oldest snapshot at the left. Higher means more counties."
  SG_C_FC_TT_CLICK:0 "Click to plot this one."
- SG_C_FC_LBL_OBSERVER:0 "OBSERVER MODE - selection is unavailable without a player character. Everything else on this window still works."
+ SG_C_FC_LBL_OBSERVER:0 "Observer mode. Picking a series needs a played character."
 
 # TEMPORARY, paired with the diagnostic block in the window. Delete both
 # together once the series colour is confirmed working.

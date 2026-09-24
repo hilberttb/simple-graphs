@@ -1,0 +1,113 @@
+﻿###############################################################################
+# Simple Graphs - CONSUMER: the debug dump, for faiths and cultures.
+#
+# Two console commands, both debug-mode only because debug.log is:
+#
+#     effect sg_dump_effect = yes         the current selection
+#     effect sg_dump_all_effect = yes     every tracked faith and culture
+#
+# Short names on purpose. The console truncates input at exactly 255 characters
+# SILENTLY (it echoes the truncated text and runs whatever survives), so a
+# console-facing entry point is not the place for the full sg_c_faithculture_
+# prefix. The FILE keeps the prefix, which is what the architecture rules are
+# actually about.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS REPLACES, AND WHAT IT CANNOT REPLACE
+# ---------------------------------------------------------------------------
+# The window used to show a counter row, two number tables and a colour row.
+# Those are parked in sg_debug_widgets.gui.bak. This brings back everything in
+# them EXCEPT the per-entry tables, which script cannot produce at all: the
+# history lists hold numbers, and iterating a list of numbers puts the iterator
+# in the `value` scope, which logs/event_scopes.log:10-15 records as
+# "Execute Effects: no". debug_log is an effect. The full reasoning is in the
+# header of sg_engine_dump.txt.
+#
+# So a dumped line carries the aggregates - the list sizes, this snapshot's
+# count, the previous plotted y, the colour - read with the SAME data-type
+# expressions the window itself uses. For entry-level detail, parse a savegame;
+# every list is in there in plain text.
+#
+# ---------------------------------------------------------------------------
+# HOW EACH ONE FINDS ITS OBJECTS
+# ---------------------------------------------------------------------------
+# sg_dump_all_effect walks sg_faith_registry and sg_culture_registry with
+# every_in_global_list. Those registries hold SCOPES, so the iterator lands in
+# a real faith or culture scope and debug_log runs normally. This is the same
+# iteration sg_engine_clear_group_registry_effect already does.
+#
+# sg_dump_effect enters the two selection globals directly. Scope entry through
+# a global variable holding a scope - `global_var:name = { ... }` - is vanilla
+# syntax: 00_castle_buildings.txt:501 and 00_religious_war.txt:3260 among
+# others. Both are guarded with `exists`, because on a fresh campaign neither
+# global is set: there is deliberately no default selection.
+#
+# Only one of the two can ever be set at a time, so sg_dump_effect prints one
+# object or none, never two.
+#
+# ---------------------------------------------------------------------------
+# WHY BOTH, RATHER THAN ONE OF THEM
+# ---------------------------------------------------------------------------
+# They answer different questions. The selected dump is for "is what I am
+# looking at right now correct", is three lines long, and is the one to reach
+# for while testing a change to the plot. The full dump is for "capture the
+# whole state", runs to a few hundred lines, and needs no selection - so unlike
+# the picker it works in Observer mode, where a scripted GUI's Execute never
+# runs and nothing can be selected at all.
+###############################################################################
+
+sg_dump_effect = {
+
+	sg_engine_dump_globals_effect = yes
+	debug_log = sg_c_fc_debug_registry
+
+	if = {
+		limit = { exists = global_var:sg_selected_faith }
+		global_var:sg_selected_faith = {
+			debug_log = sg_c_fc_dump_faith
+		}
+	}
+
+	if = {
+		limit = { exists = global_var:sg_selected_culture }
+		global_var:sg_selected_culture = {
+			debug_log = sg_c_fc_dump_culture
+		}
+	}
+
+	# Says so out loud rather than printing nothing, because "no selection" and
+	# "the dump did not run" look identical in a log otherwise.
+	if = {
+		limit = {
+			NOT = { exists = global_var:sg_selected_faith }
+			NOT = { exists = global_var:sg_selected_culture }
+		}
+		debug_log = "SIMPLE_GRAPHS_DUMP nothing selected - click a row, or use sg_dump_all_effect"
+	}
+
+	debug_log = "SIMPLE_GRAPHS_DUMP ===== end ====="
+}
+
+sg_dump_all_effect = {
+
+	sg_engine_dump_globals_effect = yes
+	debug_log = sg_c_fc_debug_registry
+
+	# Registry order, which is every_religion_global -> every_faith for faiths
+	# and a flat every_culture_global sweep for cultures. Stable between
+	# snapshots, and the same order the picker lists them in, so a dump can be
+	# read alongside the window without re-sorting either.
+	debug_log = "SIMPLE_GRAPHS_DUMP --- faiths ---"
+	every_in_global_list = {
+		variable = sg_faith_registry
+		debug_log = sg_c_fc_dump_faith
+	}
+
+	debug_log = "SIMPLE_GRAPHS_DUMP --- cultures ---"
+	every_in_global_list = {
+		variable = sg_culture_registry
+		debug_log = sg_c_fc_dump_culture
+	}
+
+	debug_log = "SIMPLE_GRAPHS_DUMP ===== end ====="
+}

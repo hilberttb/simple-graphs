@@ -116,12 +116,10 @@ window = {
 		}
 	}
 
-	### header ###################################################################
-	text_single = {
-		position = { 20 14 }
-		text = "SG_C_FC_WINDOW_TITLE"
-	}
-
+	### close button ##########################################################
+	# All that is left of the header. The window title went with everything else
+	# that used to sit above the graph; this button is anchored top|right, over
+	# the picker column, so it never touches the paper.
 	button_standard = {
 		parentanchor = top|right
 		position = { -16 10 }
@@ -193,109 +191,36 @@ window = {
 	# The faith and culture blocks below are near-identical rather than sharing a
 	# template. See "WHY EVERYTHING BELOW EXISTS TWICE" above - they bind
 	# different datamodels and only one is ever visible.
-	text_single = {
-		position = { 20 46 }
-		text = "SG_C_FC_LBL_SELECTED"
-	}
 
-	widget = {
-		name = "sg_c_fc_selected_name"
-		position = { 120 46 }
-		size = { 520 20 }
-
-		text_single = {
-			position = { 0 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-			text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.GetNameNoTooltip]"
-		}
-		text_single = {
-			position = { 0 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-			text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.GetNameNoTooltip]"
-		}
-		# Neither set - i.e. nothing has been clicked yet in this campaign. There
-		# is deliberately no default selection: seeding one would mean naming a
-		# faith in script, which is the hardcode this column exists to remove.
-		text_single = {
-			position = { 0 0 }
-			visible = "[And( Not( GetGlobalVariable( 'sg_selected_faith' ).IsSet ), Not( GetGlobalVariable( 'sg_selected_culture' ).IsSet ) )]"
-			text = "SG_C_FC_LBL_NOSEL"
-		}
-	}
-
-	### Observer-mode warning ##################################################
-	# Selection genuinely does not work without a player character. In Observer
-	# mode a scripted GUI's Execute does not run AT ALL - confirmed 2026-09-13 by
-	# clicking four different routes into script, including two that never touch
-	# GetPlayer, and getting zero debug output from any of them; the moment a
-	# character was selected, all four fired. So this is not something the mod can
-	# route around, and the honest thing is to say so rather than let the picker
-	# look broken. See the header of sg_c_faithculture_select.txt.
-	#
-	# Everything else in this window still works in Observer - the picker lists,
-	# the counts and all the number columns are pure reads. Only clicking is
-	# blocked, so a plot selected before entering Observer keeps rendering.
-	# GetPlayer.IsValid as an availability test is the vanilla-style guard and is
-	# what workshop mod 3118461885 uses on its own floating button
-	# (HRT_floating_button.gui:5).
-	text_single = {
-		position = { 20 76 }
-		visible = "[Not( GetPlayer.IsValid )]"
-		text = "SG_C_FC_LBL_OBSERVER"
-	}
-
-	text_single = {
-		position = { 20 116 }
-		text = "SG_C_FC_LBL_SELPLOT"
-	}
 
 	### THE PAPER ##############################################################
-	# A sibling BEHIND the plot rather than a background ON it, and bigger than
-	# it on all four sides. Two things forced that, one cosmetic and one real.
+	# The whole left half of the window is a sheet now, not just a rectangle
+	# behind the plot. x 0..696 stops 4px short of the picker column at x 700, so
+	# that black gutter is the only thing dividing the two halves - the right-hand
+	# column deliberately keeps the dark window style.
 	#
-	# THE REAL ONE: a series sitting at zero plots at y = 300, which is the plot
-	# area's own bottom edge. The line is 3px wide and centred on its y, so half
-	# of it, plus the line_cap, hung below the paper and drew on the window's
-	# black background. Reported from the first coloured run: "very low lines
-	# render on the black part, not the paper". A background can only ever be
-	# exactly as big as its widget, so the paper had to stop being one.
+	# Declared FIRST among the window's visible children so everything else draws
+	# on top of it. The window's own black background widget is still underneath,
+	# and is what the picker column sits on.
 	#
-	# THE COSMETIC ONE: a line flush against the edge of a sheet of paper reads
-	# as a clipping bug even when it is not one.
+	# THE TILES ARE Background_Letter_Default's, INLINED. Same three textures,
+	# same blend modes, same sprite types, copied from
+	# game/gui/shared/backgrounds.gui:401-425, with one number changed:
+	# spriteborder 200 -> 40. The stock 200 assumes a panel over 400px tall and
+	# silently loses the tileable middle below that; 40 keeps the ragged paper
+	# edge, which is only about 15px of the 900x740 texture, and tiles the uniform
+	# middle. `using` had to be given up because a template's internals cannot be
+	# overridden from outside it.
 	#
-	# GEOMETRY, and every number in it is constrained by something:
-	#   x 36..644   the exact gap between the two y-label columns. The start
-	#               label occupies x 0..36 right-aligned and the end label
-	#               x 644..684, both in the window's light default text colour.
-	#               One pixel wider either way and a digit lands on the paper
-	#               and stops being readable.
-	#   y 128..444  10px above the plot and 6px below it. The lower bound is the
-	#               x-axis row, which moved from y 442 to y 450 to make this fit;
-	#               its year labels are light text too and must stay off the
-	#               sheet. The counters row and the numbers scrollbox moved with
-	#               it, and the scrollbox lost 8px of height so the stack still
-	#               ends at y 630 where it did before.
-	#
-	# WHY THE TEMPLATE IS INLINED HERE INSTEAD OF `using`d
-	# ----------------------------------------------------
-	# These are Background_Letter_Default's own three tiles, blend modes and
-	# sprite types, copied from game/gui/shared/backgrounds.gui:401-425, with
-	# ONE number changed: spriteborder 200 -> 40.
-	#
-	# 200 is wrong for this widget and was wrong before the resize too. The
-	# tiles are 900x740 and a Corneredtiled border of 200 assumes a panel taller
-	# than 400px; at 314px the top and bottom borders overlap and the tileable
-	# middle never renders. That was flagged as an accepted compromise when the
-	# paper went in, on the reasoning that the flat tile is uniform enough for it
-	# not to matter. Since the bottom edge turned out to be exactly where the
-	# complaint came from, guessing about the bottom edge is no longer good
-	# enough. 40 keeps the ragged paper edge, which is only about 15px of the
-	# texture, and tiles the uniform middle - so the border arithmetic fits with
-	# room to spare at any height this window will ever use.
+	# The _Default variant rather than Background_Letter: the latter reads its
+	# tiles from gfx/interface/skinned/window_letter/, which the game reskins per
+	# culture group, so the sheet would change shade depending on who is being
+	# played and the ink and the axis text would have nothing fixed to contrast
+	# against.
 	widget = {
-		name = "sg_c_fc_sel_plot_paper"
-		position = { 36 128 }
-		size = { 608 316 }
+		name = "sg_c_fc_paper"
+		position = { 0 0 }
+		size = { 696 700 }
 
 		background = {
 			name = "paper_texture_shadow"
@@ -321,7 +246,7 @@ window = {
 
 	widget = {
 		name = "sg_c_fc_sel_plot_area"
-		position = { 40 138 }
+		position = { 46 200 }
 		size = { 600 300 }
 		allow_outside = yes
 
@@ -333,6 +258,67 @@ window = {
 		# number sg_engine_append_point_effect encodes every packed segment
 		# against, and the whole point of moving the paper out is that the paper
 		# can now be resized for looks without this going anywhere near it.
+
+		### THE TWO NOTICES ####################################################
+		# Both sit in the middle of the plot and both explain an empty one. They are
+		# children of the plot area rather than free-floating widgets so that
+		# "centre of the graph" needs no arithmetic - parentanchor does it, and it
+		# keeps doing it if the plot ever moves or resizes.
+		#
+		# Mutually exclusive by construction: one requires GetPlayer to be invalid
+		# and the other requires it to be valid.
+		#
+		# Dark text, because this is on paper now. default_format plus
+		# Text_Light_Background_Overrides is the pair vanilla uses on this same
+		# letter background (window_activity_list.gui:594-595). The format resolves
+		# to color_black, { 0.1 0.1 0.03 }, which is the ink the line is drawn in.
+		widget = {
+			name = "sg_c_fc_plot_notices"
+			size = { 100% 100% }
+
+			# Observer mode. A scripted GUI's Execute does not run AT ALL without a
+			# played character - confirmed 2026-09-13 by clicking four different
+			# routes into script, including two that never touch GetPlayer, and
+			# getting zero debug output from any of them; the moment a character was
+			# selected, all four fired. The picker is genuinely inert here and the
+			# honest thing is to say so rather than let it look broken. Full
+			# reasoning in common/scripted_guis/sg_c_faithculture_select.txt.
+			#
+			# This moved into the plot from above it: with the left half now a sheet
+			# carrying nothing but the graph, the empty graph is where an
+			# explanation for an empty graph belongs.
+			#
+			# GetPlayer.IsValid as the availability test is the vanilla-style guard
+			# and is what workshop mod 3118461885 uses on its own floating button
+			# (HRT_floating_button.gui:5).
+			text_single = {
+				parentanchor = center
+				visible = "[Not( GetPlayer.IsValid )]"
+				text = "SG_C_FC_LBL_OBSERVER"
+				default_format = "#light_background"
+				using = Text_Light_Background_Overrides
+				alwaystransparent = yes
+			}
+
+			# Fewer than two snapshots. A series needs TWO points before any line
+			# exists, so in a campaign's first year every selection plots nothing and
+			# the blankness has nothing to do with which row was clicked.
+			#
+			# The Or covers the moment before the first snapshot has ever run, when
+			# the global does not exist yet. Reading .GetValue off an unset global
+			# yields 0, which would satisfy the comparison on its own - but leaning
+			# on that is exactly what went wrong in phase 8: an unset colour variable
+			# read as 0 and drew a black line for two runs before anyone asked why.
+			# Ask the question that is actually meant instead.
+			text_single = {
+				parentanchor = center
+				visible = "[And( GetPlayer.IsValid, Or( Not( GetGlobalVariable( 'sg_snapshot_index' ).IsSet ), LessThan_int32( FixedPointToInt( GetGlobalVariable( 'sg_snapshot_index' ).GetValue ), '(int32)2' ) ) ) ]"
+				text = "SG_C_FC_LBL_NEEDSNAPSHOTS"
+				default_format = "#light_background"
+				using = Text_Light_Background_Overrides
+				alwaystransparent = yes
+			}
+		}
 
 		# --- selection is a FAITH --------------------------------------------
 		widget = {
@@ -569,7 +555,7 @@ window = {
 		name = "sg_c_fc_ylabel_start"
 		# x 0..36 leaves a 4px gap before the plot's left edge at x = 40. The y
 		# origin is the plot's own, so the item positions below are plot-local.
-		position = { 0 138 }
+		position = { 6 200 }
 		size = { 36 300 }
 		allow_outside = yes
 
@@ -600,6 +586,8 @@ window = {
 						autoresize = no
 						align = right|nobaseline
 						text = "[FixedPointToInt( Scope.GetValue )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
@@ -629,6 +617,8 @@ window = {
 						autoresize = no
 						align = right|nobaseline
 						text = "[FixedPointToInt( Scope.GetValue )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
@@ -640,7 +630,7 @@ window = {
 		name = "sg_c_fc_ylabel_end"
 		# x 644..684, i.e. a 4px gap after the plot's right edge at x = 640.
 		# The picker column moved right to 700 to make room for this.
-		position = { 644 138 }
+		position = { 650 200 }
 		size = { 40 300 }
 		allow_outside = yes
 
@@ -665,6 +655,8 @@ window = {
 					text_single = {
 						position = { 0 0 }
 						text = "[FixedPointToInt( Scope.GetValue )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
@@ -691,6 +683,8 @@ window = {
 					text_single = {
 						position = { 0 0 }
 						text = "[FixedPointToInt( Scope.GetValue )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
@@ -752,7 +746,7 @@ window = {
 	# polymorphic accessor that would let one block serve both.
 	widget = {
 		name = "sg_c_fc_xaxis"
-		position = { 40 450 }
+		position = { 46 504 }
 		size = { 600 20 }
 		allow_outside = yes
 
@@ -776,6 +770,8 @@ window = {
 					text_single = {
 						position = { 0 0 }
 						text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)10000' )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
@@ -802,310 +798,54 @@ window = {
 					text_single = {
 						position = { 0 0 }
 						text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)10000' )]"
+						default_format = "#light_background"
+						using = Text_Light_Background_Overrides
 						alwaystransparent = yes
 					}
 				}
 			}
 		}
 	}
-
-	### the number columns ######################################################
-	# idx / packed entry / y start / y end, and idx / stored value / counties,
-	# both bound to the current selection and decoded with the same expressions
-	# the line itself uses.
-	#
-	# These are what make the selector verifiable rather than merely plausible:
-	# if clicking a different row changes these numbers, the binding really did
-	# move, and a line that happens to look similar cannot be mistaken for a line
-	# that never changed. They are also how the catholic migration was checked.
-	# Cheap to keep, and the first thing to read if a plot ever looks wrong.
-	widget = {
-		name = "sg_c_fc_sel_counters"
-		position = { 40 476 }
-		size = { 600 20 }
-
-		text_single = {
-			position = { 0 0 }
-			text = "SG_ENGINE_LBL_SEGCOUNT"
-		}
-		text_single = {
-			position = { 80 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
-		}
-		text_single = {
-			position = { 80 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
-		}
-
-		text_single = {
-			position = { 150 0 }
-			text = "SG_ENGINE_LBL_PLAINCOUNT"
-		}
-		text_single = {
-			position = { 250 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
-		}
-		text_single = {
-			position = { 250 0 }
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
-		}
-
-		# Kept from the deleted catholic column because it is not
-		# catholic-specific and it is the reference the two counts above are
-		# checked against: an object tracked since game start should show
-		# "plain points" equal to this, and "segments" one less.
-		text_single = {
-			position = { 330 0 }
-			text = "SG_ENGINE_LBL_SNAPSHOTS"
-		}
-		text_single = {
-			position = { 460 0 }
-			visible = "[GetGlobalVariable( 'sg_snapshot_index' ).IsSet]"
-			text = "[GetGlobalVariable( 'sg_snapshot_index' ).GetValue]"
-		}
-	}
-
-	scrollbox = {
-		name = "sg_c_fc_sel_numbers_scroll"
-		position = { 40 502 }
-		size = { 600 128 }
-
-		blockoverride "scrollbox_content"
-		{
-			vbox = {
-				name = "sg_c_fc_sel_numbers_stack"
-
-				# --- segments, decoded exactly as the line decodes them -------
-				widget = {
-					size = { 540 20 }
-					text_single = {
-						position = { 0 0 }
-						text = "SG_ENGINE_LBL_SEGCOLS"
-					}
-				}
-
-				vbox = {
-					name = "sg_c_fc_sel_segment_rows_faith"
-					visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-					datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' )]"
-
-					item = {
-						widget = {
-							size = { 540 20 }
-
-							text_single = {
-								position = { 0 0 }
-								text = "[PdxGuiWidget.GetIndexInDataModel]"
-							}
-							text_single = {
-								position = { 45 0 }
-								text = "[Scope.GetValue]"
-							}
-							text_single = {
-								position = { 180 0 }
-								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
-							}
-							text_single = {
-								position = { 260 0 }
-								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
-							}
-						}
-					}
-				}
-
-				vbox = {
-					name = "sg_c_fc_sel_segment_rows_culture"
-					visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-					datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' )]"
-
-					item = {
-						widget = {
-							size = { 540 20 }
-
-							text_single = {
-								position = { 0 0 }
-								text = "[PdxGuiWidget.GetIndexInDataModel]"
-							}
-							text_single = {
-								position = { 45 0 }
-								text = "[Scope.GetValue]"
-							}
-							text_single = {
-								position = { 180 0 }
-								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
-							}
-							text_single = {
-								position = { 260 0 }
-								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
-							}
-						}
-					}
-				}
-
-				# --- plain points --------------------------------------------
-				widget = {
-					size = { 540 20 }
-					text_single = {
-						position = { 0 0 }
-						text = "SG_C_FC_LBL_PLAINCOLS"
-					}
-				}
-
-				vbox = {
-					name = "sg_c_fc_sel_plain_rows_faith"
-					visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-					datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' )]"
-
-					item = {
-						widget = {
-							size = { 540 20 }
-
-							text_single = {
-								position = { 0 0 }
-								text = "[PdxGuiWidget.GetIndexInDataModel]"
-							}
-							text_single = {
-								position = { 45 0 }
-								text = "[Scope.GetValue]"
-							}
-							text_single = {
-								position = { 180 0 }
-								text = "[FixedPointToInt( Scope.GetValue )]"
-							}
-						}
-					}
-				}
-
-				vbox = {
-					name = "sg_c_fc_sel_plain_rows_culture"
-					visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-					datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' )]"
-
-					item = {
-						widget = {
-							size = { 540 20 }
-
-							text_single = {
-								position = { 0 0 }
-								text = "[PdxGuiWidget.GetIndexInDataModel]"
-							}
-							text_single = {
-								position = { 45 0 }
-								text = "[Scope.GetValue]"
-							}
-							text_single = {
-								position = { 180 0 }
-								text = "[FixedPointToInt( Scope.GetValue )]"
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-
-	### TEMPORARY DIAGNOSTIC - DELETE THIS WHOLE BLOCK ONCE COLOUR IS CONFIRMED ###
-	# Added after the first run drew every series in the plot's ink colour instead
-	# of its own. error.log proves the script side works: it reports
-	# sg_faithculture_color_g and _b as "set but never used" (the usual harmless
-	# message - CK3 cannot see GUI usage), and pointedly does NOT report _r,
-	# because the engine's fallback effect reads _r in a has_variable guard. So
-	# the variables exist and hold values. What is unproven is whether the GUI can
-	# read them, and whether a `line` will take a bound colour at all.
-	#
-	# This row answers both in one run:
-	#
-	#   numbers blank or 0   -> the read chain is wrong, and the swatch and the
-	#                           line are both downstream of that
-	#   numbers correct,
-	#     swatch correct,
-	#     line still ink     -> `line` ignores a bound `color`. Everything else
-	#                           works. That needs a different mechanism, not a
-	#                           different expression
-	#   numbers correct,
-	#     swatch wrong       -> the FloatToCVector4f construction is at fault
-	#   all three correct    -> done; delete this block
-	#
-	# Expected numbers for Catholicism: 0.4583  0.4583  0.3437
-	# Expected numbers for Orthodoxy:   0.7     0       0.5
-	widget = {
-		name = "sg_c_fc_colordbg"
-		position = { 40 640 }
-		size = { 600 20 }
-
-		text_single = {
-			position = { 0 0 }
-			text = "SG_C_FC_LBL_COLORDBG"
-		}
-
-		widget = {
-			name = "sg_c_fc_colordbg_faith"
-			size = { 600 20 }
-			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
-
-			text_single = {
-				position = { 110 0 }
-				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
-			}
-			text_single = {
-				position = { 190 0 }
-				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
-			}
-			text_single = {
-				position = { 270 0 }
-				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
-			}
-
-			# The swatch. `color` on an `icon` IS vanilla-attested
-			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
-			# the same binding on a `line`. So if this square is the right
-			# colour while the plot line is not, the fault is the `line`
-			# widget and nothing else - not the variables, not the decode.
-			icon = {
-				position = { 360 2 }
-				size = { 60 16 }
-				texture = "gfx/interface/colors/white.dds"
-				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
-			}
-		}
-
-		widget = {
-			name = "sg_c_fc_colordbg_culture"
-			size = { 600 20 }
-			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
-
-			text_single = {
-				position = { 110 0 }
-				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
-			}
-			text_single = {
-				position = { 190 0 }
-				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
-			}
-			text_single = {
-				position = { 270 0 }
-				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
-			}
-
-			# The swatch. `color` on an `icon` IS vanilla-attested
-			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
-			# the same binding on a `line`. So if this square is the right
-			# colour while the plot line is not, the fault is the `line`
-			# widget and nothing else - not the variables, not the decode.
-			icon = {
-				position = { 360 2 }
-				size = { 60 16 }
-				texture = "gfx/interface/colors/white.dds"
-				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
-			}
-		}
-	}
 	### END TEMPORARY DIAGNOSTIC ###############################################
+
+	### THE CURRENT SELECTION ##################################################
+	# Moved here from above the plot, where it read "SHOWING: Catholicism". The
+	# left half is a sheet carrying nothing but the graph now, so the one piece of
+	# text that says what the graph IS belongs with the control that chose it.
+	#
+	# It keeps the window's light default text colour: the picker column still
+	# sits on the black window background, and only the left half is paper.
+	#
+	# Three mutually exclusive lines rather than one, for the reason every pair in
+	# this file exists - a selection is either a Faith or a Culture, the type is
+	# carried structurally by two globals of which only one is ever set, and CK3
+	# has no polymorphic name accessor that would let one line serve both. The
+	# third covers neither being set, which is how a fresh campaign starts: there
+	# is deliberately no default selection, because seeding one would mean naming
+	# a faith in script, which is the hardcode phase 5 existed to remove.
+	widget = {
+		name = "sg_c_fc_selected_name"
+		position = { 700 14 }
+		size = { 430 24 }
+
+		text_single = {
+			position = { 0 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.GetNameNoTooltip]"
+			default_format = "#bold"
+		}
+		text_single = {
+			position = { 0 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.GetNameNoTooltip]"
+			default_format = "#bold"
+		}
+		text_single = {
+			position = { 0 0 }
+			visible = "[And( Not( GetGlobalVariable( 'sg_selected_faith' ).IsSet ), Not( GetGlobalVariable( 'sg_selected_culture' ).IsSet ) )]"
+			text = "SG_C_FC_LBL_NOSEL"
+		}
+	}
 
 	### THE PICKER ##############################################################
 	# Every faith and every culture that has ever held a county, read straight
@@ -1137,39 +877,15 @@ window = {
 	# faiths come out grouped by religion (every_religion_global -> every_faith),
 	# cultures in a flat sweep. It is stable between snapshots. CK3 datamodels
 	# have no sort, so any other ordering would have to be produced script-side.
-	text_single = {
-		position = { 700 14 }
-		text = "SG_C_FC_LBL_PICKER"
-	}
 
-	widget = {
-		name = "sg_c_fc_generic_counters"
-		position = { 700 46 }
-		size = { 430 20 }
-
-		# RUNG A
-		text_single = {
-			position = { 0 0 }
-			text = "SG_C_FC_LBL_FAITHCOUNT"
-		}
-		text_single = {
-			position = { 110 0 }
-			text = "[GetDataModelSize( GetGlobalList( 'sg_faith_registry' ) )]"
-		}
-		text_single = {
-			position = { 180 0 }
-			text = "SG_C_FC_LBL_CULTCOUNT"
-		}
-		text_single = {
-			position = { 300 0 }
-			text = "[GetDataModelSize( GetGlobalList( 'sg_culture_registry' ) )]"
-		}
-	}
 
 	scrollbox = {
 		name = "sg_c_fc_generic_scroll"
-		position = { 700 72 }
-		size = { 430 604 }
+		# Was { 700 72 } 430x604, under a "PICK ONE" heading and a row of
+		# faith/culture counts. Both are gone; the list starts directly under
+		# the selection name and still ends at y 676.
+		position = { 700 46 }
+		size = { 430 630 }
 
 		blockoverride "scrollbox_content"
 		{
@@ -1325,7 +1041,7 @@ window = {
 										# errors in six seconds - which is how the null-character root
 										# was finally found, so it did its job - but it is not worth
 										# re-adding until the selection itself is working. The
-										# "SHOWING:" line above the plot already names the selection.
+										# selection's name above this list already says what is plotted.
 
 										tooltip = "SG_C_FC_TT_CLICK"
 
@@ -1339,25 +1055,13 @@ window = {
 											size = { 100% 100% }
 											alwaystransparent = yes
 
+											# The three numeric columns that used to sit at x 180, 260 and 330
+											# - counties now, plain points, segments - are parked in
+											# sg_debug_widgets.gui.bak with the rest of the debug readouts.
+											# A picker row is just a name now.
 											text_single = {
 												position = { 0 0 }
 												text = "[Faith.GetNameNoTooltip]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 180 0 }
-												visible = "[Faith.MakeScope.GetVariable( 'sg_faithculture_counties_now' ).IsSet]"
-												text = "[FixedPointToInt( Faith.MakeScope.GetVariable( 'sg_faithculture_counties_now' ).GetValue )]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 260 0 }
-												text = "[GetDataModelSize( Faith.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 330 0 }
-												text = "[GetDataModelSize( Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
 												alwaystransparent = yes
 											}
 										}
@@ -1432,25 +1136,13 @@ window = {
 											size = { 100% 100% }
 											alwaystransparent = yes
 
+											# The three numeric columns that used to sit at x 180, 260 and 330
+											# - counties now, plain points, segments - are parked in
+											# sg_debug_widgets.gui.bak with the rest of the debug readouts.
+											# A picker row is just a name now.
 											text_single = {
 												position = { 0 0 }
 												text = "[Culture.GetNameNoTooltip]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 180 0 }
-												visible = "[Culture.MakeScope.GetVariable( 'sg_faithculture_counties_now' ).IsSet]"
-												text = "[FixedPointToInt( Culture.MakeScope.GetVariable( 'sg_faithculture_counties_now' ).GetValue )]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 260 0 }
-												text = "[GetDataModelSize( Culture.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
-												alwaystransparent = yes
-											}
-											text_single = {
-												position = { 330 0 }
-												text = "[GetDataModelSize( Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
 												alwaystransparent = yes
 											}
 										}

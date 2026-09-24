@@ -1,0 +1,353 @@
+###############################################################################
+# Simple Graphs - PARKED DEBUG WIDGETS. NOT LOADED BY THE GAME.
+#
+# The extension is .bak, not .gui, so CK3 never parses this. It also sits at the
+# repository root, which build-workshop.ps1 does not copy, so it never ships.
+#
+# These three blocks were direct children of the `window` in
+# gui/simple_graphs/sg_c_faithculture_window.gui until 2026-09-23, when the
+# window was rebuilt around the paper background and everything that was not the
+# graph or the picker came out. They are kept verbatim - positions, comments and
+# all - because the intention is to bring them back behind a debug-mode check
+# rather than to rewrite them from scratch.
+#
+# WHAT THEY NEED IF THEY COME BACK
+# --------------------------------
+# 1. New coordinates. Every `position` below is from the OLD layout, where the
+#    plot sat at { 46 128 } and the left column ran top to bottom. The plot is
+#    now vertically centred at { 46 200 } and everything above and below it is
+#    deliberately empty paper, so these will land on the graph if pasted as-is.
+# 2. Dark text. They were written for a black window background and use the
+#    default light text colour. On the paper they need
+#    default_format = "#light_background" plus
+#    using = Text_Light_Background_Overrides, the pair the y and x axis labels
+#    now carry.
+# 3. Their localization keys, which were deliberately LEFT IN
+#    localization/english/sg_c_faithculture_l_english.yml and
+#    sg_engine_l_english.yml rather than deleted: SG_ENGINE_LBL_SEGCOUNT,
+#    SG_ENGINE_LBL_PLAINCOUNT, SG_ENGINE_LBL_SNAPSHOTS, SG_ENGINE_LBL_SEGCOLS,
+#    SG_C_FC_LBL_PLAINCOLS, SG_C_FC_LBL_COLORDBG.
+#
+# WHY THEY WERE WORTH KEEPING
+# ---------------------------
+# The two number tables are what made the phase-5 selector migration checkable
+# rather than merely plausible: they decode the stored data with the SAME
+# expressions the line itself uses, so if clicking a different row changes the
+# numbers, the binding really did move. The colour row below them is newer and
+# settled phase 8 - showing the three stored channels as text beside an `icon`
+# swatch drawn from them is what proved a `line` accepts a databound colour.
+###############################################################################
+
+
+# =============================================================================
+# 1. THE COUNTER ROW  -  segments / plain points / snapshots taken
+# =============================================================================
+
+	### the number columns ######################################################
+	# idx / packed entry / y start / y end, and idx / stored value / counties,
+	# both bound to the current selection and decoded with the same expressions
+	# the line itself uses.
+	#
+	# These are what make the selector verifiable rather than merely plausible:
+	# if clicking a different row changes these numbers, the binding really did
+	# move, and a line that happens to look similar cannot be mistaken for a line
+	# that never changed. They are also how the catholic migration was checked.
+	# Cheap to keep, and the first thing to read if a plot ever looks wrong.
+	widget = {
+		name = "sg_c_fc_sel_counters"
+		position = { 40 476 }
+		size = { 600 20 }
+
+		text_single = {
+			position = { 0 0 }
+			text = "SG_ENGINE_LBL_SEGCOUNT"
+		}
+		text_single = {
+			position = { 80 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
+		}
+		text_single = {
+			position = { 80 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' ) )]"
+		}
+
+		text_single = {
+			position = { 150 0 }
+			text = "SG_ENGINE_LBL_PLAINCOUNT"
+		}
+		text_single = {
+			position = { 250 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
+		}
+		text_single = {
+			position = { 250 0 }
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+			text = "[GetDataModelSize( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' ) )]"
+		}
+
+		# Kept from the deleted catholic column because it is not
+		# catholic-specific and it is the reference the two counts above are
+		# checked against: an object tracked since game start should show
+		# "plain points" equal to this, and "segments" one less.
+		text_single = {
+			position = { 330 0 }
+			text = "SG_ENGINE_LBL_SNAPSHOTS"
+		}
+		text_single = {
+			position = { 460 0 }
+			visible = "[GetGlobalVariable( 'sg_snapshot_index' ).IsSet]"
+			text = "[GetGlobalVariable( 'sg_snapshot_index' ).GetValue]"
+		}
+	}
+
+
+# =============================================================================
+# 2. THE NUMBER TABLES  -  idx / packed entry / y start / y end,
+#    and idx / stored value / counties.
+# =============================================================================
+
+	scrollbox = {
+		name = "sg_c_fc_sel_numbers_scroll"
+		position = { 40 502 }
+		size = { 600 128 }
+
+		blockoverride "scrollbox_content"
+		{
+			vbox = {
+				name = "sg_c_fc_sel_numbers_stack"
+
+				# --- segments, decoded exactly as the line decodes them -------
+				widget = {
+					size = { 540 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SG_ENGINE_LBL_SEGCOLS"
+					}
+				}
+
+				vbox = {
+					name = "sg_c_fc_sel_segment_rows_faith"
+					visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties_seg' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
+							}
+							text_single = {
+								position = { 260 0 }
+								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
+							}
+						}
+					}
+				}
+
+				vbox = {
+					name = "sg_c_fc_sel_segment_rows_culture"
+					visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties_seg' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[Modulo_int32( Divide_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' ), '(int32)1000' )]"
+							}
+							text_single = {
+								position = { 260 0 }
+								text = "[Modulo_int32( FixedPointToInt( Scope.GetValue ), '(int32)1000' )]"
+							}
+						}
+					}
+				}
+
+				# --- plain points --------------------------------------------
+				widget = {
+					size = { 540 20 }
+					text_single = {
+						position = { 0 0 }
+						text = "SG_C_FC_LBL_PLAINCOLS"
+					}
+				}
+
+				vbox = {
+					name = "sg_c_fc_sel_plain_rows_faith"
+					visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.GetList( 'sg_faithculture_counties' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[FixedPointToInt( Scope.GetValue )]"
+							}
+						}
+					}
+				}
+
+				vbox = {
+					name = "sg_c_fc_sel_plain_rows_culture"
+					visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+					datamodel = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.GetList( 'sg_faithculture_counties' )]"
+
+					item = {
+						widget = {
+							size = { 540 20 }
+
+							text_single = {
+								position = { 0 0 }
+								text = "[PdxGuiWidget.GetIndexInDataModel]"
+							}
+							text_single = {
+								position = { 45 0 }
+								text = "[Scope.GetValue]"
+							}
+							text_single = {
+								position = { 180 0 }
+								text = "[FixedPointToInt( Scope.GetValue )]"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+
+# =============================================================================
+# 3. THE COLOUR DIAGNOSTIC  -  r/g/b as text plus a swatch icon.
+#    Added and used during phase 8, runs 2 and 3.
+# =============================================================================
+
+
+	### TEMPORARY DIAGNOSTIC - DELETE THIS WHOLE BLOCK ONCE COLOUR IS CONFIRMED ###
+	# Added after the first run drew every series in the plot's ink colour instead
+	# of its own. error.log proves the script side works: it reports
+	# sg_faithculture_color_g and _b as "set but never used" (the usual harmless
+	# message - CK3 cannot see GUI usage), and pointedly does NOT report _r,
+	# because the engine's fallback effect reads _r in a has_variable guard. So
+	# the variables exist and hold values. What is unproven is whether the GUI can
+	# read them, and whether a `line` will take a bound colour at all.
+	#
+	# This row answers both in one run:
+	#
+	#   numbers blank or 0   -> the read chain is wrong, and the swatch and the
+	#                           line are both downstream of that
+	#   numbers correct,
+	#     swatch correct,
+	#     line still ink     -> `line` ignores a bound `color`. Everything else
+	#                           works. That needs a different mechanism, not a
+	#                           different expression
+	#   numbers correct,
+	#     swatch wrong       -> the FloatToCVector4f construction is at fault
+	#   all three correct    -> done; delete this block
+	#
+	# Expected numbers for Catholicism: 0.4583  0.4583  0.3437
+	# Expected numbers for Orthodoxy:   0.7     0       0.5
+	widget = {
+		name = "sg_c_fc_colordbg"
+		position = { 40 640 }
+		size = { 600 20 }
+
+		text_single = {
+			position = { 0 0 }
+			text = "SG_C_FC_LBL_COLORDBG"
+		}
+
+		widget = {
+			name = "sg_c_fc_colordbg_faith"
+			size = { 600 20 }
+			visible = "[GetGlobalVariable( 'sg_selected_faith' ).IsSet]"
+
+			text_single = {
+				position = { 110 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
+			}
+			text_single = {
+				position = { 190 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
+			}
+			text_single = {
+				position = { 270 0 }
+				text = "[GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
+			}
+
+			# The swatch. `color` on an `icon` IS vanilla-attested
+			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
+			# the same binding on a `line`. So if this square is the right
+			# colour while the plot line is not, the fault is the `line`
+			# widget and nothing else - not the variables, not the decode.
+			icon = {
+				position = { 360 2 }
+				size = { 60 16 }
+				texture = "gfx/interface/colors/white.dds"
+				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_faith' ).Faith.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+			}
+		}
+
+		widget = {
+			name = "sg_c_fc_colordbg_culture"
+			size = { 600 20 }
+			visible = "[GetGlobalVariable( 'sg_selected_culture' ).IsSet]"
+
+			text_single = {
+				position = { 110 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue]"
+			}
+			text_single = {
+				position = { 190 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue]"
+			}
+			text_single = {
+				position = { 270 0 }
+				text = "[GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue]"
+			}
+
+			# The swatch. `color` on an `icon` IS vanilla-attested
+			# (window_inventory.gui:1024, Artifact.GetRarityColor), unlike
+			# the same binding on a `line`. So if this square is the right
+			# colour while the plot line is not, the fault is the `line`
+			# widget and nothing else - not the variables, not the decode.
+			icon = {
+				position = { 360 2 }
+				size = { 60 16 }
+				texture = "gfx/interface/colors/white.dds"
+				color = "[FloatToCVector4f( FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_r' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_g' ).GetValue ), FixedPointToFloat( GetGlobalVariable( 'sg_selected_culture' ).Culture.MakeScope.Var( 'sg_faithculture_color_b' ).GetValue ), '(float)1' )]"
+			}
+		}
+	}

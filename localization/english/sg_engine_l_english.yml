@@ -17,6 +17,11 @@
 
  sg_engine_debug_snapshot_date:0 "SIMPLE_GRAPHS snapshot on [GetCurrentDate.GetStringLong] (year [GetCurrentDate.GetYear])"
 
+# The snapshot clock, written at the top of every debug dump so a captured log
+# always says which snapshot the numbers under it belong to. Read by
+# sg_engine_dump_globals_effect.
+ sg_engine_dump_globals:0 "SIMPLE_GRAPHS_DUMP globals index=[GetGlobalVariable('sg_snapshot_index').GetValue] base=[GetGlobalVariable('sg_snapshot_base').GetValue] year=[GetGlobalVariable('sg_snapshot_year').GetValue]"
+
  SG_ENGINE_CLOSE:0 "Close"
  SG_ENGINE_LBL_SNAPSHOTS:0 "snapshots taken:"
  SG_ENGINE_LBL_SEGCOUNT:0 "segments:"

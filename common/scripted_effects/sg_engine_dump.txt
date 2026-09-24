@@ -1,0 +1,73 @@
+﻿###############################################################################
+# Simple Graphs - ENGINE: the snapshot globals, written to debug.log.
+#
+# ENGINE FILE. Subject to the two rules in README_GENERICITY_INVESTIGATION.md:
+#   1. no sg_engine_* file names a game object type;
+#   2. no sg_engine_* file references anything sg_c_*.
+#
+# ---------------------------------------------------------------------------
+# WHY A DUMP EXISTS AT ALL
+# ---------------------------------------------------------------------------
+# The window used to carry its own debug readouts: a counter row, two number
+# tables decoding every stored entry, and a colour row. They came out when the
+# window was rebuilt around the paper background, and they are parked verbatim
+# in sg_debug_widgets.gui.bak at the repository root.
+#
+# This is the stopgap that replaces them until they come back behind a proper
+# debug-mode check. It writes to debug.log, which needs debug mode anyway, so
+# nothing here is reachable in a normal game.
+#
+# ---------------------------------------------------------------------------
+# WHAT A DUMP CAN AND CANNOT CONTAIN. THIS IS AN ENGINE LIMIT, NOT A CHOICE.
+# ---------------------------------------------------------------------------
+# The parked widgets showed one row PER ENTRY of each stored list. A script
+# effect cannot reproduce that, and no amount of effort will change it.
+#
+# The history lists hold NUMBERS, not scopes. Iterating one with every_in_list
+# puts the iterator in the `value` scope type, and logs/event_scopes.log:10-15
+# says exactly what that scope can do:
+#
+#       value:
+#       Evaluate Triggers: no
+#       Execute Effects:   no
+#       Change Scopes:     no
+#
+# No effects. debug_log is an effect. So there is no way to run anything at all
+# once per numeric entry, and per-entry output is off the table from script.
+# This was checked before it was attempted rather than after.
+#
+# What IS reachable is every aggregate the data-type system exposes - list
+# SIZES via GetDataModelSize, and any plain variable via Var - which is the
+# same set the GUI reads, through the same expressions. That is what the dump
+# carries.
+#
+# THE ONE COMPLETE SOURCE OF PER-ENTRY DATA IS THE SAVEGAME, which stores every
+# list in plain text. Anything wanting entry-level detail should parse a save,
+# the way verify_snapshot_totals.py already parses debug.log.
+#
+# ---------------------------------------------------------------------------
+# sg_engine_dump_globals_effect
+# ---------------------------------------------------------------------------
+# Scope none. Writes the snapshot clock: which snapshot number the campaign is
+# on, the legacy scaled counter, and the in-game year the last snapshot was
+# taken in.
+#
+# Every consumer's dump begins with this, so that a captured log always says
+# which snapshot the numbers under it belong to. A dump without that is a
+# column of numbers with no idea when they were true.
+#
+# The SIMPLE_GRAPHS_DUMP marker is greppable and deliberately distinct from the
+# SIMPLE_GRAPHS and SIMPLE_GRAPHS_REGISTRY markers the snapshot itself writes,
+# so a dump can be pulled out of a log that also contains snapshot traffic.
+###############################################################################
+
+sg_engine_dump_globals_effect = {
+
+	debug_log = "SIMPLE_GRAPHS_DUMP ===== begin ====="
+
+	# The real-time date, from the engine. Distinct from the in-game year below
+	# and useful for lining a dump up against a screenshot.
+	debug_log_date = yes
+
+	debug_log = sg_engine_dump_globals
+}
